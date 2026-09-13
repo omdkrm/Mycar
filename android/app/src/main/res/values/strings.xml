@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">My Car</string>
+    <string name="app_name_fa">خودروی من</string>
+    <string name="dashboard">داشبورد</string>
+    <string name="vehicles">خودروها</string>
+    <string name="services">سرویس‌ها</string>
+    <string name="fuel">سوخت</string>
+    <string name="reminders">یادآوری‌ها</string>
+    <string name="reports">گزارش‌ها</string>
+    <string name="settings">تنظیمات</string>
+    <string name="add_vehicle">ثبت خودرو جدید</string>
+    <string name="no_vehicles">هنوز خودرویی ثبت نکرده‌اید.</string>
+    <string name="no_services">هنوز سابقه سرویس ثبت نشده است.</string>
+    <string name="no_fuel">هنوز سابقه سوخت‌گیری ثبت نشده است.</string>
+    <string name="no_reminders">در حال حاضر یادآوری فعالی ندارید.</string>
+    <string name="currency_toman">تومان</string>
+    <string name="unit_km">کیلومتر</string>
+    <string name="unit_liter">لیتر</string>
+</resources>

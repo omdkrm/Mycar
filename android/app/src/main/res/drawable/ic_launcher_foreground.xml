@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#0891B2"
+        android:pathData="M0,0h108v108h-108z" />
+    <!-- Car icon body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,42 L42,32 L66,32 L74,42 L82,45 C84.2,45.8 86,48 86,51 L86,66 C86,68 84.4,69 82,69 L80,69 C80,72.3 77.3,75 74,75 C70.7,75 68,72.3 68,69 L40,69 C40,72.3 37.3,75 34,75 C30.7,75 28,72.3 28,69 L26,69 C23.6,69 22,68 22,66 L22,51 C22,48 23.8,45.8 26,45 L34,42 Z M43,36 L38,42 L70,42 L65,36 Z M34,54 C32.3,54 31,55.3 31,57 C31,58.7 32.3,60 34,60 C35.7,60 37,58.7 37,57 C37,55.3 35.7,54 34,54 Z M74,54 C72.3,54 71,55.3 71,57 C71,58.7 72.3,60 74,60 C75.7,60 77,58.7 77,57 C77,55.3 75.7,54 74,54 Z" />
+</vector>
