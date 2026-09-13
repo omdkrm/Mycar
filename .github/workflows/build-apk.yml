@@ -18,11 +18,7 @@ steps:
       java-version: '17'
       distribution: 'temurin'
       cache: gradle
-      cache-dependency-path: |
-        android/**/*.gradle*
-        android/**/gradle-wrapper.properties
-        android/gradle/*.versions.toml
-        android/gradle.properties
+      cache-dependency-path: android/**/gradle-wrapper.properties
 
   - name: Make Gradle executable
     working-directory: android
