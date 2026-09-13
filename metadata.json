@@ -1,0 +1,6 @@
+{
+  "name": "My Car",
+  "description": "اپلیکیشن جامع مدیریت، نگهداری و هزینه‌های خودرو با ثبت سرویس‌ها، سوخت، یادآوری و گزارش‌های تحلیلی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
