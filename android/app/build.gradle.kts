@@ -22,12 +22,6 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
         create("release") {
             // Load release keystore from project properties or environment variables
             val releaseKeystorePath = project.findProperty("MYCAR_RELEASE_KEYSTORE") as? String
@@ -51,7 +45,6 @@ android {
     buildTypes {
         getByName("debug") {
             isDebuggable = true
-            signingConfig = signingConfigs.getByName("debug")
         }
         getByName("release") {
             isDebuggable = false
