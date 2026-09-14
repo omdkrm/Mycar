@@ -131,7 +131,7 @@ export function calculateFuelConsumption(
   costPerKm: number | null;
 } {
   const records = fuelRecords
-    .filter((r) => r.vehicleId === vehicleId)
+    .filter((r) => r.vehicleId === vehicleId && (r.liters || r.fuelQuantity || 0) > 0 && r.mileage > 0)
     .sort((a, b) => a.mileage - b.mileage || a.dateTimestamp - b.dateTimestamp);
 
   const totalFuelCost = records.reduce((sum, r) => sum + (r.totalCost || 0), 0);

@@ -2,6 +2,7 @@ package com.mycar.app.data.repository
 
 import com.mycar.app.data.db.AppDatabase
 import com.mycar.app.data.model.*
+import com.mycar.app.data.util.FuelCalculator
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -106,18 +107,23 @@ class CarRepository(private val database: AppDatabase) {
     }
 
     suspend fun addFuelRecord(fuelRecord: FuelRecord, updateMileage: Boolean = true) {
-        // Calculate consumption if previous fuel record exists
-        val previousRecords = fuelDao.getFuelRecordsListForVehicle(fuelRecord.vehicleId)
-        val calculatedConsumption = if (previousRecords.isNotEmpty() && fuelRecord.isFullTank) {
-            val last = previousRecords.first()
-            val kmDiff = fuelRecord.mileage - last.mileage
-            if (kmDiff > 0 && last.isFullTank) {
-                (fuelRecord.liters / kmDiff.toDouble()) * 100.0
-            } else null
-        } else null
+        // Calculate consumption if previous fuel record exists based on consecutive odometer mileage
+        val existingRecords = fuelDao.getFuelRecordsListForVehicle(fuelRecord.vehicleId)
+        val allRecords = existingRecords.filter { it.id != fuelRecord.id } + fuelRecord
+        val calculatedConsumption = FuelCalculator.calculateIntervalConsumption(fuelRecord, allRecords)
 
         val recordToSave = fuelRecord.copy(calculatedConsumptionLPer100Km = calculatedConsumption)
         fuelDao.insertFuelRecord(recordToSave)
+
+        // Update subsequent record if this record was inserted between or before existing records
+        val validSorted = allRecords.filter { it.liters > 0.0 && it.mileage > 0 }
+            .sortedWith(compareBy<FuelRecord> { it.mileage }.thenBy { it.dateTimestamp })
+        val currentIndex = validSorted.indexOfFirst { it.id == fuelRecord.id }
+        if (currentIndex in 0 until validSorted.size - 1) {
+            val nextRecord = validSorted[currentIndex + 1]
+            val updatedNextConsumption = FuelCalculator.calculateIntervalConsumption(nextRecord, validSorted)
+            fuelDao.updateFuelRecord(nextRecord.copy(calculatedConsumptionLPer100Km = updatedNextConsumption))
+        }
 
         if (updateMileage) {
             val vehicle = vehicleDao.getVehicleById(fuelRecord.vehicleId)
@@ -137,6 +143,15 @@ class CarRepository(private val database: AppDatabase) {
 
     suspend fun deleteFuelRecord(record: FuelRecord) {
         fuelDao.deleteFuelRecord(record)
+        val remainingRecords = fuelDao.getFuelRecordsListForVehicle(record.vehicleId)
+        val validSorted = remainingRecords.filter { it.liters > 0.0 && it.mileage > 0 }
+            .sortedWith(compareBy<FuelRecord> { it.mileage }.thenBy { it.dateTimestamp })
+        for (item in validSorted) {
+            val updated = FuelCalculator.calculateIntervalConsumption(item, validSorted)
+            if (updated != item.calculatedConsumptionLPer100Km) {
+                fuelDao.updateFuelRecord(item.copy(calculatedConsumptionLPer100Km = updated))
+            }
+        }
     }
 
     suspend fun calculateReminders(vehicle: Vehicle): List<ReminderItem> {
@@ -190,8 +205,7 @@ class CarRepository(private val database: AppDatabase) {
         val totalExp = serviceTotal + fuelTotal
 
         val totalLiters = fuels.sumOf { it.liters }
-        val consumptions = fuels.mapNotNull { it.calculatedConsumptionLPer100Km }
-        val avgConsumption = if (consumptions.isNotEmpty()) consumptions.average() else null
+        val avgConsumption = FuelCalculator.calculateAverageConsumption(fuels, vehicle.id)
 
         val minMileage = fuels.minOfOrNull { it.mileage } ?: vehicle.currentMileage
         val distanceDriven = (vehicle.currentMileage - minMileage).coerceAtLeast(0)

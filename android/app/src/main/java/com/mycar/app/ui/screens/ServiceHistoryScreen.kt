@@ -1,11 +1,15 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -36,7 +40,7 @@ fun ServiceHistoryScreen(
             if (activeVehicle != null) {
                 FloatingActionButton(
                     onClick = { showAddDialog = true },
-                    containerColor = CyanPrimary,
+                    containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "ثبت سرویس")
@@ -51,7 +55,7 @@ fun ServiceHistoryScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("ابتدا یک خودرو را انتخاب یا ثبت کنید.")
+                Text("ابتدا یک خودرو را انتخاب یا ثبت کنید.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else if (services.isEmpty()) {
             EmptyServices(onAddClick = { showAddDialog = true }, modifier = Modifier.padding(padding))
@@ -105,20 +109,20 @@ fun EmptyServices(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(64.dp), tint = CyanPrimary)
+        Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "هنوز سابقه سرویس ثبت نشده است.", style = MaterialTheme.typography.titleLarge)
+        Text(text = "هنوز سابقه سرویس ثبت نشده است.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "تعویض روغن، فیلترها، شمع یا تعمیرات خود را ثبت کنید.", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "تعویض روغن، فیلترها، شمع یا تعمیرات خود را ثبت کنید.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onAddClick,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "ثبت اولین سرویس")
+            Text(text = "ثبت اولین سرویس", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -128,7 +132,8 @@ fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -141,19 +146,21 @@ fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
                 Text(
                     text = service.partName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "کیلومتر: ${formatNumber(service.mileage)} | هزینه: ${formatNumber(service.costTotal)} تومان",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (service.brand.isNotBlank() || service.serviceCenter.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "برند: ${service.brand.ifBlank { "نامشخص" }} | تعمیرگاه: ${service.serviceCenter.ifBlank { "-" }}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -182,18 +189,35 @@ fun AddServiceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ثبت سرویس خودرو", style = MaterialTheme.typography.titleLarge) },
+        title = {
+            Text(
+                text = "ثبت سرویس خودرو",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Predefined catalog picker
-                Text("انتخاب از قطعات و سرویس‌های استاندارد:", style = MaterialTheme.typography.labelSmall)
-                val catalogSample = CatalogData.items.take(4)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Predefined catalog picker - horizontally scrollable chip row
+                Text(
+                    text = "انتخاب از قطعات و سرویس‌های استاندارد:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val catalogSample = CatalogData.items.take(6)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     catalogSample.forEach { item ->
                         SuggestionChip(
                             onClick = {
@@ -201,7 +225,21 @@ fun AddServiceDialog(
                                 selectedCatalogId = item.id
                                 category = item.category
                             },
-                            label = { Text(item.name, style = MaterialTheme.typography.labelSmall) }
+                            label = {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1
+                                )
+                            },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            ),
+                            border = SuggestionChipDefaults.suggestionChipBorder(
+                                enabled = true,
+                                borderColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
                         )
                     }
                 }
@@ -213,12 +251,14 @@ fun AddServiceDialog(
                         selectedCatalogId = null
                     },
                     label = { Text("نام قطعه / سرویس") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = mileageStr,
                     onValueChange = { mileageStr = it },
                     label = { Text("کیلومتر هنگام سرویس") },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -226,23 +266,24 @@ fun AddServiceDialog(
                     value = costStr,
                     onValueChange = { costStr = it },
                     label = { Text("هزینه کل (تومان)") },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = brand,
-                        onValueChange = { brand = it },
-                        label = { Text("برند قطعه") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = center,
-                        onValueChange = { center = it },
-                        label = { Text("نام تعمیرگاه") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                OutlinedTextField(
+                    value = brand,
+                    onValueChange = { brand = it },
+                    label = { Text("برند قطعه") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = center,
+                    onValueChange = { center = it },
+                    label = { Text("نام تعمیرگاه") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
@@ -254,14 +295,14 @@ fun AddServiceDialog(
                         onConfirm(partName, selectedCatalogId, category, km, cost, brand, center, notes)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("ثبت")
+                Text("ثبت", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("انصراف")
+                Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

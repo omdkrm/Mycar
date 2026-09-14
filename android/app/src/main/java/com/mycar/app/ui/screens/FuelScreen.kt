@@ -1,10 +1,13 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,7 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.FuelRecord
 import com.mycar.app.data.model.Vehicle
-import com.mycar.app.ui.theme.CyanPrimary
+import com.mycar.app.data.util.FuelCalculator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,20 +103,20 @@ fun EmptyFuel(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.LocalGasStation, contentDescription = null, modifier = Modifier.size(64.dp), tint = CyanPrimary)
+        Icon(Icons.Default.LocalGasStation, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "هنوز سابقه سوخت‌گیری ثبت نشده است.", style = MaterialTheme.typography.titleLarge)
+        Text(text = "هنوز سابقه سوخت‌گیری ثبت نشده است.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "برای محاسبه دقیق مصرف سوخت و هزینه‌ها، بنزین مصرفی را ثبت کنید.", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "برای محاسبه دقیق مصرف سوخت و هزینه‌ها، بنزین مصرفی را ثبت کنید.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onAddClick,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "ثبت اولین سوخت‌گیری")
+            Text(text = "ثبت اولین سوخت‌گیری", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -123,7 +126,8 @@ fun FuelItemCard(record: FuelRecord, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -137,11 +141,12 @@ fun FuelItemCard(record: FuelRecord, onDelete: () -> Unit) {
                     Text(
                         text = "${record.liters} لیتر (${record.fuelType})",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (record.isFullTank) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Badge(containerColor = CyanPrimary) {
+                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
                             Text("باک پر", color = Color.White)
                         }
                     }
@@ -150,13 +155,13 @@ fun FuelItemCard(record: FuelRecord, onDelete: () -> Unit) {
                 Text(
                     text = "کیلومتر: ${formatNumber(record.mileage)} | هزینه: ${formatNumber(record.totalCost)} تومان",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 record.calculatedConsumptionLPer100Km?.let { consumption ->
                     Text(
-                        text = "مصرف: %.1f لیتر در ۱۰۰ کیلومتر".format(consumption),
+                        text = "مصرف: ${FuelCalculator.formatConsumption(consumption, "fa")}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CyanPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -185,11 +190,12 @@ fun AddFuelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ثبت سوخت‌گیری", style = MaterialTheme.typography.titleLarge) },
+        title = { Text("ثبت سوخت‌گیری", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -254,14 +260,14 @@ fun AddFuelDialog(
                         onConfirm(km, l, cpl, total, isFullTank, fuelType, gasStation, notes)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("ثبت")
+                Text("ثبت", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("انصراف")
+                Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

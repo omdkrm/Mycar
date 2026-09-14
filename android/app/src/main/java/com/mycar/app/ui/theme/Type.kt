@@ -25,6 +25,11 @@ val VazirmatnTypography = Typography(
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp
     ),
+    displaySmall = TextStyle(
+        fontFamily = VazirmatnFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 24.sp
+    ),
     headlineLarge = TextStyle(
         fontFamily = VazirmatnFontFamily,
         fontWeight = FontWeight.Bold,

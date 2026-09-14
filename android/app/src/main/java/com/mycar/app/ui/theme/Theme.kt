@@ -7,35 +7,48 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = CyanLight,
-    onPrimary = SurfaceDark,
+    onPrimary = Color(0xFF0F172A),
     primaryContainer = CyanDark,
     onPrimaryContainer = CyanContainer,
     background = BackgroundDark,
-    surface = SurfaceDark,
     onBackground = TextPrimaryDark,
-    onSurface = TextPrimaryDark
+    surface = SurfaceDark,
+    onSurface = TextPrimaryDark,
+    surfaceVariant = SurfaceVariantDark,
+    onSurfaceVariant = TextSecondaryDark,
+    outline = OutlineDark,
+    outlineVariant = OutlineDark,
+    error = StatusRose,
+    onError = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = CyanPrimary,
-    onPrimary = SurfaceLight,
+    onPrimary = Color.White,
     primaryContainer = CyanContainer,
-    onPrimaryContainer = CyanDark,
+    onPrimaryContainer = OnCyanContainer,
     background = BackgroundLight,
-    surface = SurfaceLight,
     onBackground = TextPrimaryLight,
-    onSurface = TextPrimaryLight
+    surface = SurfaceLight,
+    onSurface = TextPrimaryLight,
+    surfaceVariant = SurfaceVariantLight,
+    onSurfaceVariant = TextSecondaryLight,
+    outline = OutlineLight,
+    outlineVariant = OutlineVariantLight,
+    error = StatusRose,
+    onError = Color.White
 )
 
 @Composable
 fun MyCarTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false, // Light-first presentation by default for optimal readability
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

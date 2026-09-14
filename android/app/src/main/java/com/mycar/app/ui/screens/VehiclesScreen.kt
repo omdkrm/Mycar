@@ -1,12 +1,15 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -85,20 +88,20 @@ fun EmptyVehicles(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(64.dp), tint = CyanPrimary)
+        Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "هنوز خودرویی ثبت نکرده‌اید.", style = MaterialTheme.typography.titleLarge)
+        Text(text = "هنوز خودرویی ثبت نکرده‌اید.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "برای شروع ثبت هزینه‌ها، خودروی خود را تعریف کنید.", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "برای شروع ثبت هزینه‌ها، خودروی خود را تعریف کنید.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onAddClick,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "ثبت اولین خودرو")
+            Text(text = "ثبت اولین خودرو", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -118,6 +121,10 @@ fun VehicleItemCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
         )
     ) {
         Row(
@@ -132,11 +139,12 @@ fun VehicleItemCard(
                     Text(
                         text = vehicle.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (isSelected) {
                         Spacer(modifier = Modifier.width(8.dp))
-                        Badge(containerColor = CyanPrimary) {
+                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
                             Text("خودروی فعال", color = Color.White)
                         }
                     }
@@ -145,13 +153,14 @@ fun VehicleItemCard(
                 Text(
                     text = "${vehicle.model} - سال ${vehicle.year} | ${formatNumber(vehicle.currentMileage)} کیلومتر",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (vehicle.plateNumber.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "پلاک: ${vehicle.plateNumber}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -178,11 +187,12 @@ fun AddVehicleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "ثبت خودرو جدید", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(text = "ثبت خودرو جدید", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -190,12 +200,14 @@ fun AddVehicleDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("نام خودرو (مثال: سمند EF7)") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = model,
                     onValueChange = { model = it },
                     label = { Text("تیپ / مدل") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -203,6 +215,7 @@ fun AddVehicleDialog(
                         value = year,
                         onValueChange = { year = it },
                         label = { Text("سال ساخت") },
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -210,6 +223,7 @@ fun AddVehicleDialog(
                         value = mileageStr,
                         onValueChange = { mileageStr = it },
                         label = { Text("کارکرد (کیلومتر)") },
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -218,6 +232,7 @@ fun AddVehicleDialog(
                     value = plate,
                     onValueChange = { plate = it },
                     label = { Text("شماره پلاک") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -231,14 +246,14 @@ fun AddVehicleDialog(
                         onConfirm(name, model, year, plate, km, cap, fuelType, color)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("ثبت")
+                Text("ثبت", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("انصراف")
+                Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

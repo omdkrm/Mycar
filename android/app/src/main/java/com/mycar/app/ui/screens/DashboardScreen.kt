@@ -1,5 +1,6 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.repository.ReminderItem
 import com.mycar.app.data.repository.ReminderStatus
 import com.mycar.app.data.repository.VehicleStats
+import com.mycar.app.data.util.FuelCalculator
 import com.mycar.app.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -83,7 +85,7 @@ fun DashboardScreen(
                 ) {
                     StatCard(
                         title = "میانگین مصرف",
-                        value = stats?.avgConsumptionLPer100Km?.let { "%.1f L/100km".format(it) } ?: "داده ناکافی",
+                        value = FuelCalculator.formatConsumption(stats?.avgConsumptionLPer100Km),
                         icon = Icons.Default.LocalGasStation,
                         modifier = Modifier.weight(1f)
                     )
@@ -101,6 +103,7 @@ fun DashboardScreen(
                 Text(
                     text = "دسترسی سریع",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -136,6 +139,7 @@ fun DashboardScreen(
                     Text(
                         text = "هشدارهای سرویس",
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -160,29 +164,33 @@ fun EmptyDashboard(onAddVehicle: () -> Unit) {
             imageVector = Icons.Default.DirectionsCar,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
-            tint = CyanPrimary
+            tint = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "هنوز خودرویی ثبت نکرده‌اید.",
             style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "برای شروع ثبت سرویس‌ها، سوخت و یادآوری‌ها، اولین خودروی خود را اضافه کنید.",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondaryLight
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onAddVehicle,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = CyanPrimary)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White
+            )
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "ثبت اولین خودرو", style = MaterialTheme.typography.labelLarge)
+            Text(text = "ثبت اولین خودرو", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -194,7 +202,10 @@ fun ActiveVehicleCard(vehicle: Vehicle, onSwitchVehicle: () -> Unit) {
             .fillMaxWidth()
             .clickable { onSwitchVehicle() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CyanPrimary)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White
+        )
     ) {
         Row(
             modifier = Modifier
@@ -207,13 +218,15 @@ fun ActiveVehicleCard(vehicle: Vehicle, onSwitchVehicle: () -> Unit) {
                 Text(
                     text = vehicle.name,
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 if (vehicle.model.isNotBlank() || vehicle.year.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${vehicle.model} - مدل ${vehicle.year}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
+                        color = Color.White.copy(alpha = 0.92f)
                     )
                 }
                 if (vehicle.plateNumber.isNotBlank()) {
@@ -221,7 +234,7 @@ fun ActiveVehicleCard(vehicle: Vehicle, onSwitchVehicle: () -> Unit) {
                     Text(
                         text = "پلاک: ${vehicle.plateNumber}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                 }
             }
@@ -246,14 +259,29 @@ fun StatCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Icon(imageVector = icon, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(22.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -268,32 +296,43 @@ fun QuickActionButton(
     Card(
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = CyanPrimary)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(text = title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
 @Composable
 fun ReminderCard(item: ReminderItem, onClick: () -> Unit) {
-    val statusColor = when (item.status) {
-        ReminderStatus.OVERDUE -> StatusRose
-        ReminderStatus.APPROACHING -> StatusAmber
-        ReminderStatus.HEALTHY -> StatusGreen
+    val (statusColor, statusLabel) = when (item.status) {
+        ReminderStatus.OVERDUE -> StatusRose to "نیازمند تعویض فوری"
+        ReminderStatus.APPROACHING -> StatusAmber to "نزدیک موعد سرویس"
+        ReminderStatus.HEALTHY -> StatusGreen to "وضعیت مطلوب"
     }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -303,18 +342,29 @@ fun ReminderCard(item: ReminderItem, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(text = item.partName, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = item.partName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(3.dp))
                 val kmText = if (item.kmRemaining <= 0) "${formatNumber(Math.abs(item.kmRemaining))} کیلومتر گذشته" else "${formatNumber(item.kmRemaining)} کیلومتر مانده"
-                Text(text = kmText, style = MaterialTheme.typography.bodySmall, color = statusColor)
+                Text(
+                    text = kmText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
+                )
             }
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(statusColor.copy(alpha = 0.15f))
+                    .background(statusColor.copy(alpha = 0.12f))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (item.status == ReminderStatus.OVERDUE) "موعد گذشته" else "نزدیک موعد",
+                    text = statusLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = statusColor,
                     fontWeight = FontWeight.Bold
@@ -331,3 +381,4 @@ fun formatNumber(number: Long): String {
 fun formatNumber(number: Int): String {
     return NumberFormat.getNumberInstance(Locale.US).format(number)
 }
+

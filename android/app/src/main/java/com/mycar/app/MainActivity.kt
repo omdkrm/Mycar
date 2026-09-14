@@ -57,30 +57,46 @@ class MainActivity : ComponentActivity() {
                                 title = {
                                     Text(
                                         text = "My Car | ${currentScreen.title}",
-                                        style = MaterialTheme.typography.titleLarge
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 },
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.surface,
-                                    titleContentColor = CyanPrimary
+                                    titleContentColor = MaterialTheme.colorScheme.onSurface
                                 )
                             )
                         },
                         bottomBar = {
                             NavigationBar(
                                 containerColor = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 8.dp
+                                tonalElevation = 3.dp
                             ) {
                                 Screen.values().forEach { screen ->
+                                    val isSelected = currentScreen == screen
                                     NavigationBarItem(
-                                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                                        label = { Text(screen.title, style = MaterialTheme.typography.labelSmall) },
-                                        selected = currentScreen == screen,
+                                        icon = {
+                                            Icon(
+                                                imageVector = screen.icon,
+                                                contentDescription = screen.title
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = screen.title,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        },
+                                        selected = isSelected,
                                         onClick = { currentScreen = screen },
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = CyanPrimary,
-                                            selectedTextColor = CyanPrimary,
-                                            indicatorColor = CyanPrimary.copy(alpha = 0.15f)
+                                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     )
                                 }

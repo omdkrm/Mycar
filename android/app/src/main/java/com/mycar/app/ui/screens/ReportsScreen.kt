@@ -1,5 +1,6 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,8 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.repository.VehicleStats
-import com.mycar.app.ui.theme.CyanDark
-import com.mycar.app.ui.theme.CyanPrimary
+import com.mycar.app.data.util.FuelCalculator
 
 @Composable
 fun ReportsScreen(
@@ -26,12 +26,13 @@ fun ReportsScreen(
 ) {
     if (activeVehicle == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("ابتدا یک خودرو را انتخاب یا ثبت کنید.")
+            Text("ابتدا یک خودرو را انتخاب یا ثبت کنید.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -39,7 +40,8 @@ fun ReportsScreen(
                 Text(
                     text = "گزارش مالی و عملکرد ${activeVehicle.name}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -47,10 +49,17 @@ fun ReportsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = CyanPrimary)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(text = "مجموع کل مخارج خودرو", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+                        Text(
+                            text = "مجموع کل مخارج خودرو",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "${formatNumber(stats?.totalExpense ?: 0)} تومان",
@@ -63,7 +72,12 @@ fun ReportsScreen(
             }
 
             item {
-                Text(text = "تفکیک هزینه‌ها", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = "تفکیک هزینه‌ها",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 val serviceTotal = stats?.totalServiceCost ?: 0L
                 val fuelTotal = stats?.totalFuelCost ?: 0L
@@ -72,21 +86,27 @@ fun ReportsScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("هزینه سرویس و قطعات:")
-                            Text("${formatNumber(serviceTotal)} تومان (${(serviceTotal / grandTotal * 100).toInt()}%)", fontWeight = FontWeight.Bold)
+                            Text("هزینه سرویس و قطعات:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "${formatNumber(serviceTotal)} تومان (${(serviceTotal / grandTotal * 100).toInt()}%)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         LinearProgressIndicator(
                             progress = { serviceTotal / grandTotal },
                             modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                            color = CyanPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -94,14 +114,19 @@ fun ReportsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("هزینه سوخت (بنزین):")
-                            Text("${formatNumber(fuelTotal)} تومان (${(fuelTotal / grandTotal * 100).toInt()}%)", fontWeight = FontWeight.Bold)
+                            Text("هزینه سوخت (بنزین):", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "${formatNumber(fuelTotal)} تومان (${(fuelTotal / grandTotal * 100).toInt()}%)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         LinearProgressIndicator(
                             progress = { fuelTotal / grandTotal },
                             modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                            color = CyanDark,
+                            color = MaterialTheme.colorScheme.secondary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     }
@@ -109,40 +134,57 @@ fun ReportsScreen(
             }
 
             item {
-                Text(text = "شاخص‌های اقتصادی", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = "شاخص‌های اقتصادی",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("میانگین مصرف سوخت:")
+                            Text("میانگین مصرف سوخت:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(
-                                text = stats?.avgConsumptionLPer100Km?.let { "%.1f L/100km".format(it) } ?: "داده ناکافی",
+                                text = FuelCalculator.formatConsumption(stats?.avgConsumptionLPer100Km),
                                 fontWeight = FontWeight.Bold,
-                                color = CyanPrimary
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
-                        Divider()
+                        Divider(color = MaterialTheme.colorScheme.outline)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("مجموع بنزین مصرفی:")
-                            Text("${stats?.totalLiters ?: 0.0} لیتر", fontWeight = FontWeight.Bold)
+                            Text("مجموع بنزین مصرفی:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "${stats?.totalLiters ?: 0.0} لیتر",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
-                        Divider()
+                        Divider(color = MaterialTheme.colorScheme.outline)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("مسافت تحت بررسی:")
-                            Text("${formatNumber(stats?.totalDistanceDrivenKm ?: 0)} کیلومتر", fontWeight = FontWeight.Bold)
+                            Text("مسافت تحت بررسی:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "${formatNumber(stats?.totalDistanceDrivenKm ?: 0)} کیلومتر",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }

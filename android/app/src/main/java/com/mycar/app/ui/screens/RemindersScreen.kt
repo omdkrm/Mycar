@@ -1,5 +1,6 @@
 package com.mycar.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -80,7 +81,8 @@ fun FullReminderCard(item: ReminderItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -91,12 +93,13 @@ fun FullReminderCard(item: ReminderItem, onClick: () -> Unit) {
                 Text(
                     text = item.partName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(statusColor.copy(alpha = 0.15f))
+                        .background(statusColor.copy(alpha = 0.12f))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -116,12 +119,13 @@ fun FullReminderCard(item: ReminderItem, onClick: () -> Unit) {
                     text = if (item.kmRemaining <= 0) "کارکرد مازاد: ${formatNumber(Math.abs(item.kmRemaining))} کیلومتر"
                     else "باقیمانده تا سرویس: ${formatNumber(item.kmRemaining)} کیلومتر",
                     style = MaterialTheme.typography.bodySmall,
-                    color = statusColor
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "دوره سرویس: هر ${formatNumber(item.schedule.kmInterval)} کیلومتر",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
