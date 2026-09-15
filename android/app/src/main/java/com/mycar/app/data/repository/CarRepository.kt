@@ -222,6 +222,12 @@ class CarRepository(private val database: AppDatabase) {
         )
     }
 
+    val backupManager = com.mycar.app.data.backup.BackupManager(database)
+
+    suspend fun createBackupJson(): String = backupManager.createBackupJson()
+
+    suspend fun restoreFromJson(json: String): com.mycar.app.data.backup.RestoreResult = backupManager.restoreFromJson(json)
+
     suspend fun clearAllUserData() {
         database.vehicleDao().deleteAllVehicles()
         database.serviceDao().deleteAllServices()

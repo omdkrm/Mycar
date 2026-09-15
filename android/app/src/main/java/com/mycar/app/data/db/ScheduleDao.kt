@@ -9,6 +9,9 @@ interface ScheduleDao {
     @Query("SELECT * FROM maintenance_schedules WHERE vehicleId = :vehicleId")
     fun getSchedulesForVehicle(vehicleId: String): Flow<List<MaintenanceSchedule>>
 
+    @Query("SELECT * FROM maintenance_schedules")
+    suspend fun getAllSchedulesList(): List<MaintenanceSchedule>
+
     @Query("SELECT * FROM maintenance_schedules WHERE vehicleId = :vehicleId")
     suspend fun getSchedulesListForVehicle(vehicleId: String): List<MaintenanceSchedule>
 

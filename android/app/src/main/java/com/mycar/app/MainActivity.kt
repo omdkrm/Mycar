@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.mycar.app.ui.screens.*
@@ -150,7 +151,11 @@ class MainActivity : ComponentActivity() {
                                     stats = stats
                                 )
                                 Screen.SETTINGS -> SettingsScreen(
-                                    onClearAllData = { viewModel.clearAllUserData() }
+                                    onClearAllData = { viewModel.clearAllUserData() },
+                                    onCreateBackup = { viewModel.createBackupJson() },
+                                    onWriteBackupToUri = { ctx, uri, json -> viewModel.writeBackupToUri(ctx, uri, json) },
+                                    onReadBackupFromUri = { ctx, uri -> viewModel.readBackupFromUri(ctx, uri) },
+                                    onRestoreBackup = { json -> viewModel.restoreBackup(json) }
                                 )
                             }
                         }

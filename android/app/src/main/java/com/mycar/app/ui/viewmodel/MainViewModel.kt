@@ -194,6 +194,28 @@ class MainViewModel(private val repository: CarRepository) : ViewModel() {
         }
     }
 
+    val backupManager = repository.backupManager
+
+    suspend fun createBackupJson(): String = repository.createBackupJson()
+
+    suspend fun restoreBackup(jsonString: String): com.mycar.app.data.backup.RestoreResult {
+        val result = repository.restoreFromJson(jsonString)
+        if (result is com.mycar.app.data.backup.RestoreResult.Success) {
+            _selectedVehicleId.value = null
+            _reminders.value = emptyList()
+            _stats.value = null
+        }
+        return result
+    }
+
+    suspend fun writeBackupToUri(context: android.content.Context, uri: android.net.Uri, json: String): Boolean {
+        return repository.backupManager.writeBackupToUri(context, uri, json)
+    }
+
+    suspend fun readBackupFromUri(context: android.content.Context, uri: android.net.Uri): String? {
+        return repository.backupManager.readBackupFromUri(context, uri)
+    }
+
     fun clearAllUserData() {
         viewModelScope.launch {
             repository.clearAllUserData()

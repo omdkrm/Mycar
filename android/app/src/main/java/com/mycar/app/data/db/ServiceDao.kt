@@ -15,8 +15,14 @@ interface ServiceDao {
     @Query("SELECT * FROM service_records ORDER BY dateTimestamp DESC")
     fun getAllServices(): Flow<List<ServiceRecord>>
 
+    @Query("SELECT * FROM service_records ORDER BY dateTimestamp DESC")
+    suspend fun getAllServicesList(): List<ServiceRecord>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertService(service: ServiceRecord)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertServices(services: List<ServiceRecord>)
 
     @Update
     suspend fun updateService(service: ServiceRecord)

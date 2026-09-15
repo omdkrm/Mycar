@@ -15,8 +15,14 @@ interface FuelDao {
     @Query("SELECT * FROM fuel_records ORDER BY dateTimestamp DESC")
     fun getAllFuelRecords(): Flow<List<FuelRecord>>
 
+    @Query("SELECT * FROM fuel_records ORDER BY dateTimestamp DESC")
+    suspend fun getAllFuelRecordsList(): List<FuelRecord>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFuelRecord(fuelRecord: FuelRecord)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFuelRecords(fuelRecords: List<FuelRecord>)
 
     @Update
     suspend fun updateFuelRecord(fuelRecord: FuelRecord)

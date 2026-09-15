@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.FuelRecord
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.util.FuelCalculator
+import com.mycar.app.ui.theme.CyanPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
