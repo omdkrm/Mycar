@@ -6,8 +6,85 @@ import java.util.TimeZone
 
 object PersianDateHelper {
 
+    val PERSIAN_MONTH_NAMES = listOf(
+        "فروردین",
+        "اردیبهشت",
+        "خرداد",
+        "تیر",
+        "مرداد",
+        "شهریور",
+        "مهر",
+        "آبان",
+        "آذر",
+        "دی",
+        "بهمن",
+        "اسفند"
+    )
+
+    val WEEK_DAYS_SHORT = listOf("ش", "ی", "د", "س", "چ", "پ", "ج")
+
+    val WEEK_DAYS_NAMES = listOf(
+        "شنبه",
+        "یک‌شنبه",
+        "دوشنبه",
+        "سه‌شنبه",
+        "چهارشنبه",
+        "پنج‌شنبه",
+        "جمعه"
+    )
+
     data class JalaliDate(val year: Int, val month: Int, val day: Int) {
         override fun toString(): String = String.format(Locale.US, "%04d/%02d/%02d", year, month, day)
+    }
+
+    /**
+     * Checks if a Jalali year is a leap year (366 days, Esfand has 30 days).
+     */
+    fun isLeapJalaliYear(jy: Int): Boolean {
+        val rem = jy % 33
+        return rem in listOf(1, 5, 9, 13, 17, 22, 26, 30)
+    }
+
+    /**
+     * Returns the number of days in the specified Jalali month.
+     */
+    fun getDaysInMonth(jy: Int, jm: Int): Int {
+        return when {
+            jm in 1..6 -> 31
+            jm in 7..11 -> 30
+            jm == 12 -> if (isLeapJalaliYear(jy)) 30 else 29
+            else -> 30
+        }
+    }
+
+    /**
+     * Returns the day of the week for day 1 of the given Jalali year and month.
+     * 0 = شنبه (Saturday), 1 = یک‌شنبه (Sunday), ..., 6 = جمعه (Friday).
+     */
+    fun getFirstDayOfWeek(jy: Int, jm: Int): Int {
+        val (gy, gm, gd) = jalaliToGregorian(jy, jm, 1)
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Tehran"))
+        cal.set(Calendar.YEAR, gy)
+        cal.set(Calendar.MONTH, gm - 1)
+        cal.set(Calendar.DAY_OF_MONTH, gd)
+        val dow = cal.get(Calendar.DAY_OF_WEEK)
+        return dow % 7
+    }
+
+    /**
+     * Formats timestamp into full Persian display, e.g. "سه‌شنبه، ۲۴ شهریور ۱۴۰۵".
+     */
+    fun formatJalaliFull(timestampMillis: Long): String {
+        val j = timestampToJalali(timestampMillis)
+        val (gy, gm, gd) = jalaliToGregorian(j.year, j.month, j.day)
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Tehran"))
+        cal.set(Calendar.YEAR, gy)
+        cal.set(Calendar.MONTH, gm - 1)
+        cal.set(Calendar.DAY_OF_MONTH, gd)
+        val dow = cal.get(Calendar.DAY_OF_WEEK)
+        val dayName = WEEK_DAYS_NAMES.getOrElse(dow % 7) { "" }
+        val monthName = PERSIAN_MONTH_NAMES.getOrElse(j.month - 1) { "" }
+        return "$dayName، ${j.day} $monthName ${j.year}"
     }
 
     /**

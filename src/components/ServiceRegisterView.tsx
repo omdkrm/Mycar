@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { normalizeDigits, parseNumericInput, formatWithCommas, formatMileage, formatCurrency } from '../utils/formatters';
 import { formatToJalali, parseJalaliStringToDate } from '../utils/persianDate';
+import { PersianDatePickerModal } from './PersianDatePickerModal';
 
 interface ServiceRegisterViewProps {
   vehicles: Vehicle[];
@@ -50,6 +51,7 @@ export const ServiceRegisterView: React.FC<ServiceRegisterViewProps> = ({
   const [invoicePhotoUrl, setInvoicePhotoUrl] = useState<string | undefined>(undefined);
   const [nextMileageStr, setNextMileageStr] = useState('');
   const [nextJalaliDateStr, setNextJalaliDateStr] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -338,25 +340,47 @@ export const ServiceRegisterView: React.FC<ServiceRegisterViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                تاریخ انجام (شمسی) <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-cyan-600" />
+                <span>تاریخ انجام (شمسی) <span className="text-rose-500">*</span></span>
               </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(true)}
+                  className="text-[10px] text-cyan-600 font-bold hover:underline"
+                >
+                  تقویم
+                </button>
+                <span className="text-slate-300 text-[10px]">|</span>
+                <button
+                  type="button"
+                  onClick={() => setJalaliDateStr(formatToJalali(Date.now()))}
+                  className="text-[10px] text-cyan-600 font-bold hover:underline"
+                >
+                  امروز
+                </button>
+              </div>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                readOnly
+                placeholder="مثال: 1404/06/14"
+                value={jalaliDateStr}
+                onClick={() => setShowDatePicker(true)}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono text-left cursor-pointer pr-10"
+              />
               <button
                 type="button"
-                onClick={() => setJalaliDateStr(formatToJalali(Date.now()))}
-                className="text-[10px] text-cyan-600 font-bold hover:underline"
+                onClick={() => setShowDatePicker(true)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-600 transition-colors p-1"
+                title="انتخاب از تقویم"
               >
-                امروز
+                <Calendar className="w-4 h-4 text-cyan-600" />
               </button>
             </div>
-            <input
-              type="text"
-              required
-              placeholder="مثال: 1404/06/14"
-              value={jalaliDateStr}
-              onChange={(e) => setJalaliDateStr(normalizeDigits(e.target.value))}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono text-left"
-            />
           </div>
 
           <div>
@@ -537,6 +561,16 @@ export const ServiceRegisterView: React.FC<ServiceRegisterViewProps> = ({
           </button>
         </div>
       </form>
+
+      <PersianDatePickerModal
+        isOpen={showDatePicker}
+        initialDateStr={jalaliDateStr}
+        onClose={() => setShowDatePicker(false)}
+        onSelectDate={(newDate) => {
+          setJalaliDateStr(newDate);
+          setShowDatePicker(false);
+        }}
+      />
     </div>
   );
 };

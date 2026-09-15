@@ -69,4 +69,41 @@ class PersianDateHelperTest {
         assertNull(PersianDateHelper.parseJalaliDate("1200/01/01")) // Out of range
         assertTrue(!PersianDateHelper.isValidJalaliDate("99/99/99"))
     }
+
+    @Test
+    fun testCalendarCalculations() {
+        // Month names
+        assertEquals(12, PersianDateHelper.PERSIAN_MONTH_NAMES.size)
+        assertEquals("فروردین", PersianDateHelper.PERSIAN_MONTH_NAMES[0])
+        assertEquals("اسفند", PersianDateHelper.PERSIAN_MONTH_NAMES[11])
+
+        // Weekdays short
+        assertEquals(7, PersianDateHelper.WEEK_DAYS_SHORT.size)
+        assertEquals("ش", PersianDateHelper.WEEK_DAYS_SHORT[0])
+        assertEquals("ج", PersianDateHelper.WEEK_DAYS_SHORT[6])
+
+        // Leap year checks
+        assertTrue(PersianDateHelper.isLeapJalaliYear(1403))
+        assertTrue(!PersianDateHelper.isLeapJalaliYear(1402))
+        assertTrue(!PersianDateHelper.isLeapJalaliYear(1404))
+        assertTrue(PersianDateHelper.isLeapJalaliYear(1399))
+
+        // Days in month
+        assertEquals(31, PersianDateHelper.getDaysInMonth(1403, 1))
+        assertEquals(31, PersianDateHelper.getDaysInMonth(1403, 6))
+        assertEquals(30, PersianDateHelper.getDaysInMonth(1403, 7))
+        assertEquals(30, PersianDateHelper.getDaysInMonth(1403, 11))
+        assertEquals(30, PersianDateHelper.getDaysInMonth(1403, 12)) // Leap year Esfand
+        assertEquals(29, PersianDateHelper.getDaysInMonth(1402, 12)) // Normal year Esfand
+
+        // First day of week for 1403/01/01 (2024-03-20 was Wednesday -> 4 in Persian week starting Saturday)
+        assertEquals(4, PersianDateHelper.getFirstDayOfWeek(1403, 1))
+
+        // formatJalaliFull
+        val ts = PersianDateHelper.jalaliToTimestamp(1405, 6, 24)
+        val fullStr = PersianDateHelper.formatJalaliFull(ts)
+        assertTrue(fullStr.contains("24"))
+        assertTrue(fullStr.contains("شهریور"))
+        assertTrue(fullStr.contains("1405"))
+    }
 }

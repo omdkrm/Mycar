@@ -1,6 +1,7 @@
 package com.mycar.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,7 @@ import com.mycar.app.data.model.ServiceRecord
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.util.PersianDateHelper
 import com.mycar.app.data.util.PriceFormatter
+import com.mycar.app.ui.components.PersianDatePickerDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -291,11 +293,10 @@ fun ServiceFormDialog(
     var partName by remember { mutableStateOf(initialService?.partName ?: "") }
     var selectedCatalogId by remember { mutableStateOf(initialService?.catalogItemId) }
     var category by remember { mutableStateOf(initialService?.serviceCategory ?: "دوره‌ای") }
-    var dateStr by remember {
-        mutableStateOf(
-            PersianDateHelper.formatJalali(initialService?.dateTimestamp ?: System.currentTimeMillis())
-        )
+    var selectedTimestamp by remember {
+        mutableStateOf(initialService?.dateTimestamp ?: System.currentTimeMillis())
     }
+    var showDatePicker by remember { mutableStateOf(false) }
     var mileageStr by remember {
         mutableStateOf((initialService?.mileage ?: defaultMileage).toString())
     }
@@ -384,38 +385,64 @@ fun ServiceFormDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // 2. Date Field (Persian/Jalali date)
-                OutlinedTextField(
-                    value = dateStr,
-                    onValueChange = {
-                        dateStr = it
-                        dateError = null
-                    },
-                    label = { Text("تاریخ") },
-                    placeholder = { Text("مثال: ۱۴۰۳/۰۶/۲۵") },
-                    singleLine = true,
-                    isError = dateError != null,
-                    supportingText = {
-                        if (dateError != null) {
-                            Text(dateError!!, color = MaterialTheme.colorScheme.error)
-                        } else {
-                            Text("تاریخ شمسی (روز/ماه/سال)")
-                        }
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = {
-                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis())
-                            dateError = null
-                        }) {
+                // 2. Date Field (Persian/Jalali date) - Interactive Tap to Open Calendar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                ) {
+                    OutlinedTextField(
+                        value = PersianDateHelper.formatJalali(selectedTimestamp),
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("تاریخ") },
+                        placeholder = { Text("مثال: ۱۴۰۳/۰۶/۲۵") },
+                        singleLine = true,
+                        isError = dateError != null,
+                        supportingText = {
+                            if (dateError != null) {
+                                Text(dateError!!, color = MaterialTheme.colorScheme.error)
+                            } else {
+                                Text(
+                                    text = PersianDateHelper.formatJalaliFull(selectedTimestamp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        leadingIcon = {
                             Icon(
-                                Icons.Default.Today,
-                                contentDescription = "تنظیم به تاریخ امروز",
+                                Icons.Default.CalendarToday,
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = { showDatePicker = true }) {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = "انتخاب تاریخ از تقویم",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = if (dateError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = if (dateError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledLeadingIconColor = MaterialTheme.colorScheme.primary,
+                            disabledTrailingIconColor = MaterialTheme.colorScheme.primary,
+                            disabledSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // Full-width clickable overlay to capture tap anywhere on the date field
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { showDatePicker = true }
+                    )
+                }
 
                 // Quick Date Helpers
                 Row(
@@ -424,17 +451,29 @@ fun ServiceFormDialog(
                 ) {
                     AssistChip(
                         onClick = {
-                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis())
+                            selectedTimestamp = System.currentTimeMillis()
                             dateError = null
                         },
                         label = { Text("امروز") }
                     )
                     AssistChip(
                         onClick = {
-                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis() - 86400000L)
+                            selectedTimestamp = System.currentTimeMillis() - 86400000L
                             dateError = null
                         },
                         label = { Text("دیروز") }
+                    )
+                    AssistChip(
+                        onClick = { showDatePicker = true },
+                        label = { Text("انتخاب از تقویم") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     )
                 }
 
@@ -511,12 +550,7 @@ fun ServiceFormDialog(
                         partNameError = "نام قطعه یا سرویس نمی‌تواند خالی باشد"
                         hasError = true
                     }
-                    val parsedDate = PersianDateHelper.parseJalaliDate(dateStr)
-                    if (parsedDate == null) {
-                        dateError = "لطفاً تاریخ معتبر شمسی وارد کنید (مثال: ۱۴۰۳/۰۶/۲۵)"
-                        hasError = true
-                    }
-                    if (!hasError && parsedDate != null) {
+                    if (!hasError) {
                         val km = PriceFormatter.cleanNumericString(mileageStr).toIntOrNull() ?: defaultMileage
                         val cost = PriceFormatter.parseCost(costStr)
                         onSave(
@@ -524,7 +558,7 @@ fun ServiceFormDialog(
                             selectedCatalogId,
                             category,
                             km,
-                            parsedDate,
+                            selectedTimestamp,
                             cost,
                             brand.trim(),
                             center.trim(),
@@ -547,4 +581,16 @@ fun ServiceFormDialog(
             }
         }
     )
+
+    if (showDatePicker) {
+        PersianDatePickerDialog(
+            initialTimestamp = selectedTimestamp,
+            onDismiss = { showDatePicker = false },
+            onConfirm = { newTimestamp ->
+                selectedTimestamp = newTimestamp
+                showDatePicker = false
+                dateError = null
+            }
+        )
+    }
 }

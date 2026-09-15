@@ -168,3 +168,28 @@ export function getCurrentJalaliYear(): number {
   const j = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
   return j.jy;
 }
+
+export const PERSIAN_WEEK_DAYS_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+
+export function isLeapJalaliYear(jy: number): boolean {
+  const rem = jy % 33;
+  return [1, 5, 9, 13, 17, 22, 26, 30].includes(rem);
+}
+
+export function getDaysInJalaliMonth(jy: number, jm: number): number {
+  if (jm >= 1 && jm <= 6) return 31;
+  if (jm >= 7 && jm <= 11) return 30;
+  if (jm === 12) return isLeapJalaliYear(jy) ? 30 : 29;
+  return 30;
+}
+
+/**
+ * Returns 0 for Saturday, 1 for Sunday, ..., 6 for Friday
+ */
+export function getFirstDayOfJalaliMonth(jy: number, jm: number): number {
+  const { gy, gm, gd } = jalaliToGregorian(jy, jm, 1);
+  const d = new Date(gy, gm - 1, gd);
+  const dow = d.getDay(); // 0 is Sunday, 6 is Saturday
+  return (dow + 1) % 7; // Convert to Saturday = 0, Sunday = 1, ...
+}
+
