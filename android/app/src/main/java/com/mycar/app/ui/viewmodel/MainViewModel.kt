@@ -150,6 +150,13 @@ class MainViewModel(private val repository: CarRepository) : ViewModel() {
         }
     }
 
+    fun updateService(service: ServiceRecord) {
+        viewModelScope.launch {
+            repository.updateService(service)
+            activeVehicle.value?.let { refreshVehicleCalculations(it) }
+        }
+    }
+
     fun deleteService(service: ServiceRecord) {
         viewModelScope.launch {
             repository.deleteService(service)

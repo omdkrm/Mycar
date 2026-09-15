@@ -102,6 +102,24 @@ class CarRepository(private val database: AppDatabase) {
         }
     }
 
+    suspend fun updateService(service: ServiceRecord, updateMileage: Boolean = true) {
+        serviceDao.updateService(service)
+        if (updateMileage) {
+            val vehicle = vehicleDao.getVehicleById(service.vehicleId)
+            if (vehicle != null && service.mileage > vehicle.currentMileage) {
+                vehicleDao.updateVehicle(vehicle.copy(currentMileage = service.mileage))
+                mileageDao.insertMileageRecord(
+                    MileageRecord(
+                        vehicleId = vehicle.id,
+                        mileage = service.mileage,
+                        dateTimestamp = service.dateTimestamp,
+                        note = "سرویس: ${service.partName}"
+                    )
+                )
+            }
+        }
+    }
+
     suspend fun deleteService(service: ServiceRecord) {
         serviceDao.deleteService(service)
     }

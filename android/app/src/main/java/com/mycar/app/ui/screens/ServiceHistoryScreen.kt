@@ -1,7 +1,6 @@
 package com.mycar.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.CatalogData
 import com.mycar.app.data.model.ServiceRecord
 import com.mycar.app.data.model.Vehicle
-import com.mycar.app.ui.theme.CyanPrimary
+import com.mycar.app.data.util.PersianDateHelper
+import com.mycar.app.data.util.PriceFormatter
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,15 +32,23 @@ fun ServiceHistoryScreen(
     activeVehicle: Vehicle?,
     services: List<ServiceRecord>,
     onAddService: (String, String, String?, String, Int, Long, Long, Long, Long, String, String, String, String) -> Unit,
+    onUpdateService: (ServiceRecord) -> Unit = {},
     onDeleteService: (ServiceRecord) -> Unit
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    var serviceToEdit by remember { mutableStateOf<ServiceRecord?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (activeVehicle != null) {
                 FloatingActionButton(
-                    onClick = { showAddDialog = true },
+                    onClick = {
+                        serviceToEdit = null
+                        showDialog = true
+                    },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ) {
@@ -55,10 +64,20 @@ fun ServiceHistoryScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("ابتدا یک خودرو را انتخاب یا ثبت کنید.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "ابتدا یک خودرو را انتخاب یا ثبت کنید.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         } else if (services.isEmpty()) {
-            EmptyServices(onAddClick = { showAddDialog = true }, modifier = Modifier.padding(padding))
+            EmptyServices(
+                onAddClick = {
+                    serviceToEdit = null
+                    showDialog = true
+                },
+                modifier = Modifier.padding(padding)
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -67,34 +86,70 @@ fun ServiceHistoryScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(services) { service ->
-                    ServiceItemCard(service = service, onDelete = { onDeleteService(service) })
+                items(services, key = { it.id }) { service ->
+                    ServiceItemCard(
+                        service = service,
+                        onEdit = {
+                            serviceToEdit = service
+                            showDialog = true
+                        },
+                        onDelete = { onDeleteService(service) }
+                    )
                 }
             }
         }
     }
 
-    if (showAddDialog && activeVehicle != null) {
-        AddServiceDialog(
+    if (showDialog && activeVehicle != null) {
+        ServiceFormDialog(
+            initialService = serviceToEdit,
             defaultMileage = activeVehicle.currentMileage,
-            onDismiss = { showAddDialog = false },
-            onConfirm = { partName, catId, cat, km, cost, brand, center, notes ->
-                onAddService(
-                    activeVehicle.id,
-                    partName,
-                    catId,
-                    cat,
-                    km,
-                    System.currentTimeMillis(),
-                    cost,
-                    cost,
-                    0L,
-                    brand,
-                    center,
-                    "",
-                    notes
-                )
-                showAddDialog = false
+            onDismiss = {
+                showDialog = false
+                serviceToEdit = null
+            },
+            onSave = { partName, catId, cat, km, dateTimestamp, cost, brand, center, notes ->
+                val currentEdit = serviceToEdit
+                if (currentEdit != null) {
+                    val updated = currentEdit.copy(
+                        partName = partName,
+                        catalogItemId = catId,
+                        serviceCategory = cat,
+                        mileage = km,
+                        dateTimestamp = dateTimestamp,
+                        costTotal = cost,
+                        partCost = cost,
+                        laborCost = 0L,
+                        brand = brand,
+                        serviceCenter = center,
+                        notes = notes
+                    )
+                    onUpdateService(updated)
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("تغییرات با موفقیت ذخیره شد.")
+                    }
+                } else {
+                    onAddService(
+                        activeVehicle.id,
+                        partName,
+                        catId,
+                        cat,
+                        km,
+                        dateTimestamp,
+                        cost,
+                        cost,
+                        0L,
+                        brand,
+                        center,
+                        "",
+                        notes
+                    )
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("سرویس با موفقیت ثبت شد.")
+                    }
+                }
+                showDialog = false
+                serviceToEdit = null
             }
         )
     }
@@ -109,16 +164,33 @@ fun EmptyServices(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            Icons.Default.Build,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "هنوز سابقه سرویس ثبت نشده است.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            text = "هنوز سابقه سرویس ثبت نشده است.",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "تعویض روغن، فیلترها، شمع یا تعمیرات خود را ثبت کنید.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "تعویض روغن، فیلترها، شمع یا تعمیرات خود را ثبت کنید.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onAddClick,
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White
+            )
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(6.dp))
@@ -128,7 +200,11 @@ fun EmptyServices(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
+fun ServiceItemCard(
+    service: ServiceRecord,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -151,7 +227,7 @@ fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "کیلومتر: ${formatNumber(service.mileage)} | هزینه: ${formatNumber(service.costTotal)} تومان",
+                    text = "تاریخ: ${PersianDateHelper.formatJalali(service.dateTimestamp)} | کیلومتر: ${PriceFormatter.formatWithSeparators(service.mileage)} | هزینه: ${PriceFormatter.formatCostWithUnit(service.costTotal)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -163,9 +239,30 @@ fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (service.notes.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "توضیحات: ${service.notes}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "حذف سرویس", tint = MaterialTheme.colorScheme.error)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "ویرایش",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = "حذف سرویس",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
@@ -173,25 +270,52 @@ fun ServiceItemCard(service: ServiceRecord, onDelete: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddServiceDialog(
+fun ServiceFormDialog(
+    initialService: ServiceRecord? = null,
     defaultMileage: Int,
     onDismiss: () -> Unit,
-    onConfirm: (String, String?, String, Int, Long, String, String, String) -> Unit
+    onSave: (
+        partName: String,
+        selectedCatalogId: String?,
+        category: String,
+        mileage: Int,
+        dateTimestamp: Long,
+        costTotal: Long,
+        brand: String,
+        center: String,
+        notes: String
+    ) -> Unit
 ) {
-    var partName by remember { mutableStateOf("") }
-    var selectedCatalogId by remember { mutableStateOf<String?>(null) }
-    var category by remember { mutableStateOf("دوره‌ای") }
-    var mileageStr by remember { mutableStateOf(defaultMileage.toString()) }
-    var costStr by remember { mutableStateOf("") }
-    var brand by remember { mutableStateOf("") }
-    var center by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    val isEditMode = initialService != null
+
+    var partName by remember { mutableStateOf(initialService?.partName ?: "") }
+    var selectedCatalogId by remember { mutableStateOf(initialService?.catalogItemId) }
+    var category by remember { mutableStateOf(initialService?.serviceCategory ?: "دوره‌ای") }
+    var dateStr by remember {
+        mutableStateOf(
+            PersianDateHelper.formatJalali(initialService?.dateTimestamp ?: System.currentTimeMillis())
+        )
+    }
+    var mileageStr by remember {
+        mutableStateOf((initialService?.mileage ?: defaultMileage).toString())
+    }
+    var costStr by remember {
+        mutableStateOf(
+            initialService?.let { PriceFormatter.formatWithSeparators(it.costTotal) } ?: ""
+        )
+    }
+    var brand by remember { mutableStateOf(initialService?.brand ?: "") }
+    var center by remember { mutableStateOf(initialService?.serviceCenter ?: "") }
+    var notes by remember { mutableStateOf(initialService?.notes ?: "") }
+
+    var partNameError by remember { mutableStateOf<String?>(null) }
+    var dateError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "ثبت سرویس خودرو",
+                text = if (isEditMode) "ویرایش هزینه و سرویس" else "ثبت سرویس خودرو",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -224,6 +348,7 @@ fun AddServiceDialog(
                                 partName = item.name
                                 selectedCatalogId = item.id
                                 category = item.category
+                                partNameError = null
                             },
                             label = {
                                 Text(
@@ -244,32 +369,110 @@ fun AddServiceDialog(
                     }
                 }
 
+                // 1. Part / Service Name
                 OutlinedTextField(
                     value = partName,
                     onValueChange = {
                         partName = it
                         selectedCatalogId = null
+                        if (it.isNotBlank()) partNameError = null
                     },
                     label = { Text("نام قطعه / سرویس") },
                     singleLine = true,
+                    isError = partNameError != null,
+                    supportingText = partNameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // 2. Date Field (Persian/Jalali date)
+                OutlinedTextField(
+                    value = dateStr,
+                    onValueChange = {
+                        dateStr = it
+                        dateError = null
+                    },
+                    label = { Text("تاریخ") },
+                    placeholder = { Text("مثال: ۱۴۰۳/۰۶/۲۵") },
+                    singleLine = true,
+                    isError = dateError != null,
+                    supportingText = {
+                        if (dateError != null) {
+                            Text(dateError!!, color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Text("تاریخ شمسی (روز/ماه/سال)")
+                        }
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis())
+                            dateError = null
+                        }) {
+                            Icon(
+                                Icons.Default.Today,
+                                contentDescription = "تنظیم به تاریخ امروز",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Quick Date Helpers
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AssistChip(
+                        onClick = {
+                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis())
+                            dateError = null
+                        },
+                        label = { Text("امروز") }
+                    )
+                    AssistChip(
+                        onClick = {
+                            dateStr = PersianDateHelper.formatJalali(System.currentTimeMillis() - 86400000L)
+                            dateError = null
+                        },
+                        label = { Text("دیروز") }
+                    )
+                }
+
+                // 3. Mileage at service
                 OutlinedTextField(
                     value = mileageStr,
-                    onValueChange = { mileageStr = it },
+                    onValueChange = { mileageStr = PriceFormatter.toEnglishDigits(it) },
                     label = { Text("کیلومتر هنگام سرویس") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // 4. Price / Cost Field (Thousands separators while typing)
                 OutlinedTextField(
                     value = costStr,
-                    onValueChange = { costStr = it },
+                    onValueChange = {
+                        costStr = PriceFormatter.formatInputAsYouType(it)
+                    },
                     label = { Text("هزینه کل (تومان)") },
+                    placeholder = { Text("مثال: ۱۵۰,۰۰۰") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText = {
+                        val parsed = PriceFormatter.parseCost(costStr)
+                        if (parsed > 0) {
+                            Text(
+                                PriceFormatter.formatCostWithUnit(parsed),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Text("مبلغ به تومان بدون علامت منفی")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // 5. Brand
                 OutlinedTextField(
                     value = brand,
                     onValueChange = { brand = it },
@@ -277,6 +480,8 @@ fun AddServiceDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // 6. Workshop / Service Center
                 OutlinedTextField(
                     value = center,
                     onValueChange = { center = it },
@@ -284,20 +489,56 @@ fun AddServiceDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // 7. Description / Notes
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("توضیحات") },
+                    placeholder = { Text("مثال: تعویض روغن و فیلتر، بررسی سطح مایعات") },
+                    singleLine = false,
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (partName.isNotBlank()) {
-                        val km = mileageStr.toIntOrNull() ?: defaultMileage
-                        val cost = costStr.toLongOrNull() ?: 0L
-                        onConfirm(partName, selectedCatalogId, category, km, cost, brand, center, notes)
+                    var hasError = false
+                    if (partName.isBlank()) {
+                        partNameError = "نام قطعه یا سرویس نمی‌تواند خالی باشد"
+                        hasError = true
+                    }
+                    val parsedDate = PersianDateHelper.parseJalaliDate(dateStr)
+                    if (parsedDate == null) {
+                        dateError = "لطفاً تاریخ معتبر شمسی وارد کنید (مثال: ۱۴۰۳/۰۶/۲۵)"
+                        hasError = true
+                    }
+                    if (!hasError && parsedDate != null) {
+                        val km = PriceFormatter.cleanNumericString(mileageStr).toIntOrNull() ?: defaultMileage
+                        val cost = PriceFormatter.parseCost(costStr)
+                        onSave(
+                            partName.trim(),
+                            selectedCatalogId,
+                            category,
+                            km,
+                            parsedDate,
+                            cost,
+                            brand.trim(),
+                            center.trim(),
+                            notes.trim()
+                        )
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("ثبت", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (isEditMode) "ذخیره تغییرات" else "ثبت",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {

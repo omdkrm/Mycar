@@ -194,7 +194,7 @@ export const ServiceRegisterView: React.FC<ServiceRegisterViewProps> = ({
 
     const res = onSaveRecord(payload);
     if (res.success) {
-      setSuccessMessage('سرویس با موفقیت ثبت شد و محاسبات دوره‌های بعدی به‌روزرسانی گردید.');
+      setSuccessMessage(initialRecord ? 'تغییرات با موفقیت ذخیره شد.' : 'سرویس با موفقیت ثبت شد.');
       setTimeout(() => {
         onCancel();
       }, 1200);
@@ -533,7 +533,7 @@ export const ServiceRegisterView: React.FC<ServiceRegisterViewProps> = ({
             className="px-6 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white shadow-md transition active:scale-98 flex items-center gap-2"
           >
             <Check className="w-4 h-4" />
-            <span>{initialRecord ? 'ذخیره ویرایش' : 'ثبت قطعی سرویس'}</span>
+            <span>{initialRecord ? 'ذخیره تغییرات' : 'ثبت'}</span>
           </button>
         </div>
       </form>

@@ -133,6 +133,9 @@ class MainActivity : ComponentActivity() {
                                     onAddService = { vId, pName, catId, cat, km, date, cTot, pCost, lCost, brand, center, inv, notes ->
                                         viewModel.addService(vId, pName, catId, cat, km, date, cTot, pCost, lCost, brand, center, inv, notes)
                                     },
+                                    onUpdateService = { updatedService ->
+                                        viewModel.updateService(updatedService)
+                                    },
                                     onDeleteService = { viewModel.deleteService(it) }
                                 )
                                 Screen.FUEL -> FuelScreen(
