@@ -29,18 +29,27 @@ export type NavTab =
   | 'backup';
 
 interface NavigationProps {
-  activeTab: NavTab;
-  onTabChange: (tab: NavTab) => void;
+  currentTab?: NavTab;
+  activeTab?: NavTab;
+  onSelectTab?: (tab: NavTab) => void;
+  onTabChange?: (tab: NavTab) => void;
   hasSelectedVehicle: boolean;
   overdueCount: number;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
+  currentTab,
   activeTab,
+  onSelectTab,
   onTabChange,
   hasSelectedVehicle,
   overdueCount,
 }) => {
+  const currentActiveTab = currentTab || activeTab || 'dashboard';
+  const handleTabChange = (tab: NavTab) => {
+    if (onSelectTab) onSelectTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
   const mainNavItems = [
     { id: 'dashboard', label: 'داشبورد خودرو', icon: LayoutDashboard, requiresVehicle: true },
     { id: 'register-service', label: 'ثبت سرویس', icon: Wrench, requiresVehicle: true },
@@ -66,14 +75,14 @@ export const Navigation: React.FC<NavigationProps> = ({
         <nav className="space-y-1">
           {mainNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = currentActiveTab === item.id;
             const isDisabled = item.requiresVehicle && !hasSelectedVehicle;
 
             return (
               <button
                 key={item.id}
                 disabled={isDisabled}
-                onClick={() => onTabChange(item.id as NavTab)}
+                onClick={() => handleTabChange(item.id as NavTab)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isDisabled
                     ? 'opacity-40 cursor-not-allowed text-slate-400'
@@ -106,14 +115,14 @@ export const Navigation: React.FC<NavigationProps> = ({
       <div className="lg:hidden sticky top-[65px] z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-2 py-1.5 overflow-x-auto scrollbar-none flex items-center gap-1.5">
         {mainNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = currentActiveTab === item.id;
           const isDisabled = item.requiresVehicle && !hasSelectedVehicle;
 
           return (
             <button
               key={item.id}
               disabled={isDisabled}
-              onClick={() => onTabChange(item.id as NavTab)}
+              onClick={() => handleTabChange(item.id as NavTab)}
               className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
                 isDisabled
                   ? 'opacity-40 cursor-not-allowed'

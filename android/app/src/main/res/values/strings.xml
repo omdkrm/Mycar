@@ -3,10 +3,10 @@
     <string name="app_name_fa">خودروی من</string>
     <string name="dashboard">داشبورد</string>
     <string name="vehicles">خودروها</string>
-    <string name="services">سرویس‌ها</string>
+    <string name="services">سرویسها</string>
     <string name="fuel">سوخت</string>
     <string name="reminders">یادآوری‌ها</string>
-    <string name="reports">گزارش‌ها</string>
+    <string name="reports">گزارشها</string>
     <string name="settings">تنظیمات</string>
     <string name="add_vehicle">ثبت خودرو جدید</string>
     <string name="no_vehicles">هنوز خودرویی ثبت نکرده‌اید.</string>

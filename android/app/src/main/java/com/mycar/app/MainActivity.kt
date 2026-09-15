@@ -24,10 +24,10 @@ import com.mycar.app.ui.viewmodel.MainViewModelFactory
 enum class Screen(val title: String, val icon: ImageVector) {
     DASHBOARD("داشبورد", Icons.Default.Dashboard),
     VEHICLES("خودروها", Icons.Default.DirectionsCar),
-    SERVICES("سرویس‌ها", Icons.Default.Build),
+    SERVICES("سرویسها", Icons.Default.Build),
     FUEL("سوخت", Icons.Default.LocalGasStation),
     REMINDERS("یادآوری", Icons.Default.Notifications),
-    REPORTS("گزارش‌ها", Icons.Default.BarChart),
+    REPORTS("گزارشها", Icons.Default.BarChart),
     SETTINGS("تنظیمات", Icons.Default.Settings)
 }
 
@@ -87,7 +87,9 @@ class MainActivity : ComponentActivity() {
                                             Text(
                                                 text = screen.title,
                                                 style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                maxLines = 1,
+                                                softWrap = false
                                             )
                                         },
                                         selected = isSelected,

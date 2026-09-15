@@ -432,7 +432,13 @@ export default function App() {
         {/* Navigation Sidebar for desktop */}
         <Navigation
           currentTab={currentTab}
+          activeTab={currentTab}
           onSelectTab={(tab) => {
+            setCurrentTab(tab);
+            setEditingServiceRecord(null);
+            setServicePrefillPart(null);
+          }}
+          onTabChange={(tab) => {
             setCurrentTab(tab);
             setEditingServiceRecord(null);
             setServicePrefillPart(null);
