@@ -34,6 +34,75 @@ object CatalogData {
         CatalogItem("cat-third-party-insurance", "بیمه شخص ثالث", "اداری و قانونی", 30000, 12, "تمدید سالانه بیمه‌نامه شخص ثالث"),
         CatalogItem("cat-body-insurance", "بیمه بدنه", "اداری و قانونی", 30000, 12, "تمدید سالانه بیمه‌نامه بدنه"),
         CatalogItem("cat-clutch-kit", "کیت کلاچ (دیسک و صفحه)", "انتقال قدرت", 70000, 48, "تعویض دیسک، صفحه و بلبرینگ کلاچ"),
-        CatalogItem("cat-suspension", "جلوبندی و سیستم تعلیق", "چرخ و تعلیق", 30000, 24, "بررسی سیبک، بوش و کمک‌فنرها")
+        CatalogItem("cat-suspension", "جلوبندی و سیستم تعلیق", "چرخ و تعلیق", 30000, 24, "بررسی سیبک، بوش و کمک‌فنرها"),
+        CatalogItem("cat-general-service", "سرویس دوره‌ای و آچارکشی", "سرویس‌های عمومی", 20000, 12, "آچارکشی و بازدید کامل فنی خودرو"),
+        CatalogItem("cat-fuel", "سوخت‌گیری بنزین", "سوخت و باک", 1000, 1, "ثبت هزینه سوخت و بنزین")
     )
+
+    /**
+     * Normalizes Persian and English text for robust case-insensitive and variant-insensitive matching.
+     * Replaces Arabic Yeh, Kaf, Teh Marbuta, Alef variations, collapses multiple spaces and removes diacritics.
+     */
+    fun normalizeText(input: String): String {
+        return input
+            .replace('\u064A', '\u06CC') // Arabic Yeh 'ي' -> Persian Yeh 'ی'
+            .replace('\u0649', '\u06CC') // Arabic Alef Maksura 'ى' -> Persian Yeh 'ی'
+            .replace('\u0643', '\u06A9') // Arabic Kaf 'ك' -> Persian Keheh 'ک'
+            .replace('\u0629', '\u0647') // Arabic Teh Marbuta 'ة' -> Persian Heh 'ه'
+            .replace('\u0622', '\u0627') // Alef with Madda 'آ' -> Alef 'ا'
+            .replace('\u0623', '\u0627') // Alef with Hamza Above 'أ' -> Alef 'ا'
+            .replace('\u0625', '\u0627') // Alef with Hamza Below 'إ' -> Alef 'ا'
+            .replace('\u0671', '\u0627') // Alef Wasla 'ٱ' -> Alef 'ا'
+            .replace("\u200C", " ")      // Zero-Width Non-Joiner (ZWNJ) -> space
+            .replace("\u200D", "")       // Zero-Width Joiner (ZWJ) -> remove
+            .replace(Regex("[\u064B-\u065F\u0670]"), "") // Arabic diacritics / tashkeel
+            .replace(Regex("[()\\-_/,\\[\\]]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .lowercase()
+    }
+
+    /**
+     * Filters catalog items based on user input.
+     * Matches name, category, and description. Supports multi-word matching and ranks prefix matches higher.
+     */
+    fun filterItems(query: String): List<CatalogItem> {
+        val normalizedQuery = normalizeText(query)
+        if (normalizedQuery.isBlank()) {
+            return items
+        }
+        val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+        return items.filter { item ->
+            val nameNorm = normalizeText(item.name)
+            val catNorm = normalizeText(item.category)
+            val descNorm = normalizeText(item.description)
+            nameNorm.contains(normalizedQuery) ||
+            catNorm.contains(normalizedQuery) ||
+            descNorm.contains(normalizedQuery) ||
+            (queryTokens.size > 1 && queryTokens.all { token ->
+                nameNorm.contains(token) || catNorm.contains(token) || descNorm.contains(token)
+            })
+        }.sortedWith(
+            compareByDescending<CatalogItem> { normalizeText(it.name).startsWith(normalizedQuery) }
+                .thenByDescending { normalizeText(it.name).contains(normalizedQuery) }
+                .thenByDescending { normalizeText(it.category).startsWith(normalizedQuery) }
+        )
+    }
+
+    /**
+     * Finds a catalog item that exactly matches the given query text (normalized).
+     */
+    fun findExactMatch(query: String): CatalogItem? {
+        val normalizedQuery = normalizeText(query)
+        if (normalizedQuery.isBlank()) return null
+        return items.find { normalizeText(it.name) == normalizedQuery }
+    }
+
+    /**
+     * Finds a catalog item by its unique ID.
+     */
+    fun findById(id: String?): CatalogItem? {
+        if (id == null) return null
+        return items.find { it.id == id }
+    }
 }

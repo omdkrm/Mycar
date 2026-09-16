@@ -292,8 +292,18 @@ fun ServiceFormDialog(
     val isEditMode = initialService != null
 
     var partName by remember { mutableStateOf(initialService?.partName ?: "") }
-    var selectedCatalogId by remember { mutableStateOf(initialService?.catalogItemId) }
-    var category by remember { mutableStateOf(initialService?.serviceCategory ?: "دوره‌ای") }
+    var selectedCatalogId by remember {
+        mutableStateOf(
+            initialService?.catalogItemId ?: CatalogData.findExactMatch(initialService?.partName ?: "")?.id
+        )
+    }
+    var category by remember {
+        mutableStateOf(
+            initialService?.serviceCategory?.takeIf { it.isNotBlank() }
+                ?: CatalogData.findById(selectedCatalogId)?.category
+                ?: "سرویس‌های عمومی"
+        )
+    }
     var selectedTimestamp by remember {
         mutableStateOf(initialService?.dateTimestamp ?: System.currentTimeMillis())
     }
@@ -312,6 +322,13 @@ fun ServiceFormDialog(
 
     var partNameError by remember { mutableStateOf<String?>(null) }
     var dateError by remember { mutableStateOf<String?>(null) }
+
+    // Autocomplete dropdown state
+    var expanded by remember { mutableStateOf(false) }
+    val suggestions = remember(partName) {
+        CatalogData.filterItems(partName)
+    }
+    val showDropdown = expanded && suggestions.isNotEmpty()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -333,24 +350,26 @@ fun ServiceFormDialog(
             ) {
                 // Predefined catalog picker - horizontally scrollable chip row
                 Text(
-                    text = "انتخاب از قطعات و سرویس‌های استاندارد:",
+                    text = "انتخاب سریع از قطعات و سرویس‌های پرکاربرد:",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val catalogSample = CatalogData.items.take(6)
+                val popularItems = CatalogData.items.take(8)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    catalogSample.forEach { item ->
+                    popularItems.forEach { item ->
+                        val isSelected = selectedCatalogId == item.id
                         SuggestionChip(
                             onClick = {
                                 partName = item.name
                                 selectedCatalogId = item.id
                                 category = item.category
                                 partNameError = null
+                                expanded = false
                             },
                             label = {
                                 Text(
@@ -360,31 +379,155 @@ fun ServiceFormDialog(
                                 )
                             },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                labelColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                             ),
                             border = SuggestionChipDefaults.suggestionChipBorder(
                                 enabled = true,
-                                borderColor = if (selectedCatalogId == item.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         )
                     }
                 }
 
-                // 1. Part / Service Name
-                OutlinedTextField(
-                    value = partName,
-                    onValueChange = {
-                        partName = it
-                        selectedCatalogId = null
-                        if (it.isNotBlank()) partNameError = null
-                    },
-                    label = { Text("نام قطعه / سرویس") },
-                    singleLine = true,
-                    isError = partNameError != null,
-                    supportingText = partNameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                // 1. Part / Service Name with Autocomplete Dropdown
+                ExposedDropdownMenuBox(
+                    expanded = showDropdown,
+                    onExpandedChange = { expanded = it },
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    OutlinedTextField(
+                        value = partName,
+                        onValueChange = { newText ->
+                            partName = newText
+                            expanded = true
+                            if (newText.isNotBlank()) partNameError = null
+
+                            // State correctness:
+                            // Check if current text still matches the selected catalog item
+                            val currentSelected = CatalogData.findById(selectedCatalogId)
+                            if (currentSelected != null &&
+                                CatalogData.normalizeText(currentSelected.name) != CatalogData.normalizeText(newText)
+                            ) {
+                                val exactMatch = CatalogData.findExactMatch(newText)
+                                if (exactMatch != null) {
+                                    selectedCatalogId = exactMatch.id
+                                    category = exactMatch.category
+                                } else {
+                                    selectedCatalogId = null
+                                }
+                            } else if (selectedCatalogId == null) {
+                                val exactMatch = CatalogData.findExactMatch(newText)
+                                if (exactMatch != null) {
+                                    selectedCatalogId = exactMatch.id
+                                    category = exactMatch.category
+                                }
+                            }
+                        },
+                        label = { Text("نام قطعه / سرویس") },
+                        placeholder = { Text("مثال: روغن موتور، لنت ترمز...") },
+                        singleLine = true,
+                        isError = partNameError != null,
+                        supportingText = {
+                            if (partNameError != null) {
+                                Text(partNameError!!, color = MaterialTheme.colorScheme.error)
+                            } else if (selectedCatalogId != null) {
+                                val selectedItem = CatalogData.findById(selectedCatalogId)
+                                if (selectedItem != null) {
+                                    Text(
+                                        text = "دسته‌بندی: ${selectedItem.category}",
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        },
+                        trailingIcon = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (partName.isNotBlank()) {
+                                    IconButton(
+                                        onClick = {
+                                            partName = ""
+                                            selectedCatalogId = null
+                                            expanded = true
+                                            partNameError = null
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "پاک کردن",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDropdown)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = showDropdown,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.heightIn(max = 240.dp)
+                    ) {
+                        suggestions.forEach { item ->
+                            val isItemSelected = selectedCatalogId == item.id ||
+                                (selectedCatalogId == null && CatalogData.normalizeText(item.name) == CatalogData.normalizeText(partName))
+                            DropdownMenuItem(
+                                text = {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isItemSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isItemSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = item.category,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (item.defaultKmInterval > 0) {
+                                                Text(
+                                                    text = "• هر ${PriceFormatter.formatWithSeparators(item.defaultKmInterval.toLong())} کیلومتر",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                trailingIcon = if (isItemSelected) {
+                                    {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "انتخاب شده",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                } else null,
+                                onClick = {
+                                    partName = item.name
+                                    selectedCatalogId = item.id
+                                    category = item.category
+                                    expanded = false
+                                    partNameError = null
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
 
                 // 2. Date Field (Persian/Jalali date) - Interactive Tap to Open Calendar
                 Box(
@@ -554,10 +697,16 @@ fun ServiceFormDialog(
                     if (!hasError) {
                         val km = PriceFormatter.cleanNumericString(mileageStr).toIntOrNull() ?: defaultMileage
                         val cost = PriceFormatter.parseCost(costStr)
+                        val finalCatalogId = selectedCatalogId ?: CatalogData.findExactMatch(partName.trim())?.id
+                        val finalCategory = if (finalCatalogId != null) {
+                            CatalogData.findById(finalCatalogId)?.category ?: category
+                        } else {
+                            category
+                        }
                         onSave(
                             partName.trim(),
-                            selectedCatalogId,
-                            category,
+                            finalCatalogId,
+                            finalCategory,
                             km,
                             selectedTimestamp,
                             cost,
