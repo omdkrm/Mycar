@@ -127,6 +127,7 @@ object BackupSerializer {
                 put("warningThresholdKm", ms.warningThresholdKm)
                 put("warningThresholdDays", ms.warningThresholdDays)
                 put("isEnabled", ms.isEnabled)
+                put("intervalType", ms.intervalType)
             }
             scheduleArr.put(msObj)
         }
@@ -356,7 +357,8 @@ object BackupSerializer {
                     timeIntervalMonths = msObj.optInt("timeIntervalMonths", 6),
                     warningThresholdKm = msObj.optInt("warningThresholdKm", 500),
                     warningThresholdDays = msObj.optInt("warningThresholdDays", 14),
-                    isEnabled = msObj.optBoolean("isEnabled", true)
+                    isEnabled = msObj.optBoolean("isEnabled", true),
+                    intervalType = msObj.optString("intervalType", ReminderIntervalType.COMBINED.name)
                 )
             )
         }

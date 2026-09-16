@@ -127,7 +127,10 @@ class MainViewModel(private val repository: CarRepository) : ViewModel() {
         brand: String,
         center: String,
         invoice: String,
-        notes: String
+        notes: String,
+        intervalType: ReminderIntervalType = ReminderIntervalType.COMBINED,
+        intervalKm: Int = 0,
+        intervalMonths: Int = 0
     ) {
         viewModelScope.launch {
             val service = ServiceRecord(
@@ -146,13 +149,38 @@ class MainViewModel(private val repository: CarRepository) : ViewModel() {
                 notes = notes
             )
             repository.addService(service)
+            repository.upsertSchedule(
+                vehicleId = vehicleId,
+                partName = partName,
+                catalogItemId = catalogItemId,
+                category = category,
+                intervalType = intervalType,
+                kmInterval = intervalKm,
+                timeIntervalMonths = intervalMonths
+            )
             activeVehicle.value?.let { refreshVehicleCalculations(it) }
         }
     }
 
-    fun updateService(service: ServiceRecord) {
+    fun updateService(
+        service: ServiceRecord,
+        intervalType: ReminderIntervalType? = null,
+        intervalKm: Int? = null,
+        intervalMonths: Int? = null
+    ) {
         viewModelScope.launch {
             repository.updateService(service)
+            if (intervalType != null && intervalKm != null && intervalMonths != null) {
+                repository.upsertSchedule(
+                    vehicleId = service.vehicleId,
+                    partName = service.partName,
+                    catalogItemId = service.catalogItemId,
+                    category = service.serviceCategory,
+                    intervalType = intervalType,
+                    kmInterval = intervalKm,
+                    timeIntervalMonths = intervalMonths
+                )
+            }
             activeVehicle.value?.let { refreshVehicleCalculations(it) }
         }
     }

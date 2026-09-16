@@ -136,7 +136,13 @@ class MainActivity : ComponentActivity() {
                                     onUpdateService = { updatedService ->
                                         viewModel.updateService(updatedService)
                                     },
-                                    onDeleteService = { viewModel.deleteService(it) }
+                                    onDeleteService = { viewModel.deleteService(it) },
+                                    onAddServiceWithReminder = { vId, pName, catId, cat, km, date, cTot, pCost, lCost, brand, center, inv, notes, intervalType, intervalKm, intervalMonths ->
+                                        viewModel.addService(vId, pName, catId, cat, km, date, cTot, pCost, lCost, brand, center, inv, notes, intervalType, intervalKm, intervalMonths)
+                                    },
+                                    onUpdateServiceWithReminder = { updatedService, intervalType, intervalKm, intervalMonths ->
+                                        viewModel.updateService(updatedService, intervalType, intervalKm, intervalMonths)
+                                    }
                                 )
                                 Screen.FUEL -> FuelScreen(
                                     activeVehicle = activeVehicle,

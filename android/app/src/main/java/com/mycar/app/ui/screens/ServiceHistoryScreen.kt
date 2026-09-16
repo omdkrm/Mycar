@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.CatalogData
+import com.mycar.app.data.model.ReminderIntervalType
 import com.mycar.app.data.model.ServiceRecord
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.util.PersianDateHelper
@@ -36,7 +37,9 @@ fun ServiceHistoryScreen(
     services: List<ServiceRecord>,
     onAddService: (String, String, String?, String, Int, Long, Long, Long, Long, String, String, String, String) -> Unit,
     onUpdateService: (ServiceRecord) -> Unit = {},
-    onDeleteService: (ServiceRecord) -> Unit
+    onDeleteService: (ServiceRecord) -> Unit,
+    onAddServiceWithReminder: ((String, String, String?, String, Int, Long, Long, Long, Long, String, String, String, String, ReminderIntervalType, Int, Int) -> Unit)? = null,
+    onUpdateServiceWithReminder: ((ServiceRecord, ReminderIntervalType, Int, Int) -> Unit)? = null
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var serviceToEdit by remember { mutableStateOf<ServiceRecord?>(null) }
@@ -111,7 +114,7 @@ fun ServiceHistoryScreen(
                 showDialog = false
                 serviceToEdit = null
             },
-            onSave = { partName, catId, cat, km, dateTimestamp, cost, brand, center, notes ->
+            onSave = { partName, catId, cat, km, dateTimestamp, cost, brand, center, notes, intervalType, intervalKm, intervalMonths ->
                 val currentEdit = serviceToEdit
                 if (currentEdit != null) {
                     val updated = currentEdit.copy(
@@ -127,26 +130,51 @@ fun ServiceHistoryScreen(
                         serviceCenter = center,
                         notes = notes
                     )
-                    onUpdateService(updated)
+                    if (onUpdateServiceWithReminder != null) {
+                        onUpdateServiceWithReminder(updated, intervalType, intervalKm, intervalMonths)
+                    } else {
+                        onUpdateService(updated)
+                    }
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("تغییرات با موفقیت ذخیره شد.")
                     }
                 } else {
-                    onAddService(
-                        activeVehicle.id,
-                        partName,
-                        catId,
-                        cat,
-                        km,
-                        dateTimestamp,
-                        cost,
-                        cost,
-                        0L,
-                        brand,
-                        center,
-                        "",
-                        notes
-                    )
+                    if (onAddServiceWithReminder != null) {
+                        onAddServiceWithReminder(
+                            activeVehicle.id,
+                            partName,
+                            catId,
+                            cat,
+                            km,
+                            dateTimestamp,
+                            cost,
+                            cost,
+                            0L,
+                            brand,
+                            center,
+                            "",
+                            notes,
+                            intervalType,
+                            intervalKm,
+                            intervalMonths
+                        )
+                    } else {
+                        onAddService(
+                            activeVehicle.id,
+                            partName,
+                            catId,
+                            cat,
+                            km,
+                            dateTimestamp,
+                            cost,
+                            cost,
+                            0L,
+                            brand,
+                            center,
+                            "",
+                            notes
+                        )
+                    }
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("سرویس با موفقیت ثبت شد.")
                     }
@@ -286,7 +314,10 @@ fun ServiceFormDialog(
         costTotal: Long,
         brand: String,
         center: String,
-        notes: String
+        notes: String,
+        intervalType: ReminderIntervalType,
+        intervalKm: Int,
+        intervalMonths: Int
     ) -> Unit
 ) {
     val isEditMode = initialService != null
@@ -304,6 +335,29 @@ fun ServiceFormDialog(
                 ?: "سرویس‌های عمومی"
         )
     }
+
+    val initialCatalogItem = CatalogData.findById(selectedCatalogId)
+        ?: CatalogData.findExactMatch(initialService?.partName ?: "")
+
+    var intervalType by remember {
+        mutableStateOf(
+            initialCatalogItem?.defaultIntervalType
+                ?: if (initialService?.partName?.contains("بیمه") == true || initialService?.partName?.contains("معاینه") == true) ReminderIntervalType.TIME
+                else ReminderIntervalType.COMBINED
+        )
+    }
+    var intervalKmStr by remember {
+        mutableStateOf(
+            (initialCatalogItem?.defaultKmInterval?.takeIf { it > 0 } ?: 5000).toString()
+        )
+    }
+    var intervalMonthsStr by remember {
+        mutableStateOf(
+            (initialCatalogItem?.defaultTimeIntervalMonths?.takeIf { it > 0 } ?: 12).toString()
+        )
+    }
+    var showDueDatePicker by remember { mutableStateOf(false) }
+
     var selectedTimestamp by remember {
         mutableStateOf(initialService?.dateTimestamp ?: System.currentTimeMillis())
     }
@@ -368,6 +422,9 @@ fun ServiceFormDialog(
                                 partName = item.name
                                 selectedCatalogId = item.id
                                 category = item.category
+                                intervalType = item.defaultIntervalType
+                                if (item.defaultKmInterval > 0) intervalKmStr = item.defaultKmInterval.toString()
+                                if (item.defaultTimeIntervalMonths > 0) intervalMonthsStr = item.defaultTimeIntervalMonths.toString()
                                 partNameError = null
                                 expanded = false
                             },
@@ -406,22 +463,17 @@ fun ServiceFormDialog(
                             // State correctness:
                             // Check if current text still matches the selected catalog item
                             val currentSelected = CatalogData.findById(selectedCatalogId)
-                            if (currentSelected != null &&
+                            val exactMatch = CatalogData.findExactMatch(newText)
+                            if (exactMatch != null) {
+                                selectedCatalogId = exactMatch.id
+                                category = exactMatch.category
+                                intervalType = exactMatch.defaultIntervalType
+                                if (exactMatch.defaultKmInterval > 0) intervalKmStr = exactMatch.defaultKmInterval.toString()
+                                if (exactMatch.defaultTimeIntervalMonths > 0) intervalMonthsStr = exactMatch.defaultTimeIntervalMonths.toString()
+                            } else if (currentSelected != null &&
                                 CatalogData.normalizeText(currentSelected.name) != CatalogData.normalizeText(newText)
                             ) {
-                                val exactMatch = CatalogData.findExactMatch(newText)
-                                if (exactMatch != null) {
-                                    selectedCatalogId = exactMatch.id
-                                    category = exactMatch.category
-                                } else {
-                                    selectedCatalogId = null
-                                }
-                            } else if (selectedCatalogId == null) {
-                                val exactMatch = CatalogData.findExactMatch(newText)
-                                if (exactMatch != null) {
-                                    selectedCatalogId = exactMatch.id
-                                    category = exactMatch.category
-                                }
+                                selectedCatalogId = null
                             }
                         },
                         label = { Text("نام قطعه / سرویس") },
@@ -520,6 +572,9 @@ fun ServiceFormDialog(
                                     partName = item.name
                                     selectedCatalogId = item.id
                                     category = item.category
+                                    intervalType = item.defaultIntervalType
+                                    if (item.defaultKmInterval > 0) intervalKmStr = item.defaultKmInterval.toString()
+                                    if (item.defaultTimeIntervalMonths > 0) intervalMonthsStr = item.defaultTimeIntervalMonths.toString()
                                     expanded = false
                                     partNameError = null
                                 },
@@ -625,7 +680,15 @@ fun ServiceFormDialog(
                 OutlinedTextField(
                     value = mileageStr,
                     onValueChange = { mileageStr = PriceFormatter.toEnglishDigits(it) },
-                    label = { Text("کیلومتر هنگام سرویس") },
+                    label = {
+                        Text(
+                            if (intervalType == ReminderIntervalType.TIME) "کیلومتر هنگام سرویس (اختیاری برای خدمات زمانی)"
+                            else "کیلومتر هنگام سرویس"
+                        )
+                    },
+                    placeholder = {
+                        if (intervalType == ReminderIntervalType.TIME) Text("در صورت تمایل وارد کنید") else null
+                    },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -654,6 +717,196 @@ fun ServiceFormDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Service Reminder Interval Configuration
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "تنظیم یادآوری دوره بعدی",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Text(
+                            text = "نوع یادآوری:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // 4 Types selector
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val types = listOf(
+                                ReminderIntervalType.COMBINED to "ترکیبی (کیلومتر یا زمان)",
+                                ReminderIntervalType.TIME to "فقط زمانی (بیمه/معاینه)",
+                                ReminderIntervalType.MILEAGE to "فقط کیلومتری",
+                                ReminderIntervalType.NONE to "بدون یادآور"
+                            )
+                            types.forEach { (type, label) ->
+                                val isSelected = intervalType == type
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { intervalType = type },
+                                    label = {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    leadingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+
+                        // Mileage interval input (for MILEAGE or COMBINED)
+                        if (intervalType == ReminderIntervalType.MILEAGE || intervalType == ReminderIntervalType.COMBINED) {
+                            OutlinedTextField(
+                                value = intervalKmStr,
+                                onValueChange = { intervalKmStr = PriceFormatter.toEnglishDigits(it) },
+                                label = { Text("دوره تکرار کارکرد (کیلومتر)") },
+                                placeholder = { Text("مثال: ۵۰۰۰") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(5000, 7000, 10000, 20000, 40000).forEach { km ->
+                                    AssistChip(
+                                        onClick = { intervalKmStr = km.toString() },
+                                        label = { Text("${PriceFormatter.formatWithSeparators(km.toLong())} ک.م") }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Time interval input (for TIME or COMBINED)
+                        if (intervalType == ReminderIntervalType.TIME || intervalType == ReminderIntervalType.COMBINED) {
+                            val monthsVal = PriceFormatter.cleanNumericString(intervalMonthsStr).toIntOrNull() ?: 12
+                            val calculatedNextDate = PersianDateHelper.addJalaliMonths(selectedTimestamp, monthsVal)
+
+                            OutlinedTextField(
+                                value = intervalMonthsStr,
+                                onValueChange = { intervalMonthsStr = PriceFormatter.toEnglishDigits(it) },
+                                label = { Text("دوره تکرار زمانی (ماه)") },
+                                placeholder = { Text("مثال: ۱۲") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(
+                                    3 to "۳ ماه",
+                                    6 to "۶ ماه",
+                                    12 to "۱۲ ماه (۱ سال)",
+                                    24 to "۲۴ ماه (۲ سال)"
+                                ).forEach { (m, label) ->
+                                    AssistChip(
+                                        onClick = { intervalMonthsStr = m.toString() },
+                                        label = { Text(label) }
+                                    )
+                                }
+                            }
+
+                            // Next Due Date Box
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "سررسید موعد بعدی:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = PersianDateHelper.formatJalali(calculatedNextDate),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    OutlinedButton(
+                                        onClick = { showDueDatePicker = true },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.EditCalendar,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("تغییر مستقیم تاریخ", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+
+                        if (intervalType == ReminderIntervalType.NONE) {
+                            Text(
+                                text = "برای این مورد یادآوری در آینده محاسبه نخواهد شد.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
 
                 // 5. Brand
                 OutlinedTextField(
@@ -703,6 +956,11 @@ fun ServiceFormDialog(
                         } else {
                             category
                         }
+                        val finalIntervalKm = if (intervalType == ReminderIntervalType.TIME || intervalType == ReminderIntervalType.NONE) 0
+                            else PriceFormatter.cleanNumericString(intervalKmStr).toIntOrNull() ?: 5000
+                        val finalIntervalMonths = if (intervalType == ReminderIntervalType.MILEAGE || intervalType == ReminderIntervalType.NONE) 0
+                            else PriceFormatter.cleanNumericString(intervalMonthsStr).toIntOrNull() ?: 12
+
                         onSave(
                             partName.trim(),
                             finalCatalogId,
@@ -712,7 +970,10 @@ fun ServiceFormDialog(
                             cost,
                             brand.trim(),
                             center.trim(),
-                            notes.trim()
+                            notes.trim(),
+                            intervalType,
+                            finalIntervalKm,
+                            finalIntervalMonths
                         )
                     }
                 },
@@ -740,6 +1001,20 @@ fun ServiceFormDialog(
                 selectedTimestamp = newTimestamp
                 showDatePicker = false
                 dateError = null
+            }
+        )
+    }
+
+    if (showDueDatePicker) {
+        val currentMonths = PriceFormatter.cleanNumericString(intervalMonthsStr).toIntOrNull() ?: 12
+        val currentDue = PersianDateHelper.addJalaliMonths(selectedTimestamp, currentMonths)
+        PersianDatePickerDialog(
+            initialTimestamp = currentDue,
+            onDismiss = { showDueDatePicker = false },
+            onConfirm = { pickedTimestamp ->
+                showDueDatePicker = false
+                val monthsDiff = PersianDateHelper.monthsBetween(selectedTimestamp, pickedTimestamp).coerceAtLeast(1)
+                intervalMonthsStr = monthsDiff.toString()
             }
         )
     }

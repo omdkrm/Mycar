@@ -341,22 +341,65 @@ fun ReminderCard(item: ReminderItem, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = item.partName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val typeLabel = when (item.intervalType) {
+                        com.mycar.app.data.model.ReminderIntervalType.TIME -> "زمانی"
+                        com.mycar.app.data.model.ReminderIntervalType.MILEAGE -> "کیلومتری"
+                        com.mycar.app.data.model.ReminderIntervalType.COMBINED -> "ترکیبی"
+                        com.mycar.app.data.model.ReminderIntervalType.NONE -> ""
+                    }
+                    if (typeLabel.isNotBlank()) {
+                        Text(
+                            text = "($typeLabel)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                val descriptionText = when (item.intervalType) {
+                    com.mycar.app.data.model.ReminderIntervalType.TIME -> {
+                        val dateStr = com.mycar.app.data.util.PersianDateHelper.formatJalali(item.dueDateTimestamp)
+                        when {
+                            item.daysRemaining < 0 -> "${formatNumber(Math.abs(item.daysRemaining))} روز گذشته (سررسید: $dateStr)"
+                            item.daysRemaining == 0 -> "امروز سررسید است (تاریخ: $dateStr)"
+                            else -> "${formatNumber(item.daysRemaining)} روز مانده (سررسید: $dateStr)"
+                        }
+                    }
+                    com.mycar.app.data.model.ReminderIntervalType.MILEAGE -> {
+                        if (item.kmRemaining <= 0) "${formatNumber(Math.abs(item.kmRemaining))} کیلومتر گذشته"
+                        else "${formatNumber(item.kmRemaining)} کیلومتر مانده"
+                    }
+                    com.mycar.app.data.model.ReminderIntervalType.COMBINED -> {
+                        val dateStr = com.mycar.app.data.util.PersianDateHelper.formatJalali(item.dueDateTimestamp)
+                        when {
+                            item.kmRemaining <= 0 && item.daysRemaining < 0 ->
+                                "${formatNumber(Math.abs(item.kmRemaining))} کیلومتر و ${formatNumber(Math.abs(item.daysRemaining))} روز گذشته"
+                            item.kmRemaining <= 0 ->
+                                "${formatNumber(Math.abs(item.kmRemaining))} کیلومتر گذشته"
+                            item.daysRemaining < 0 ->
+                                "${formatNumber(Math.abs(item.daysRemaining))} روز گذشته (موعد: $dateStr)"
+                            else ->
+                                "${formatNumber(item.kmRemaining)} کیلومتر یا ${formatNumber(item.daysRemaining)} روز مانده"
+                        }
+                    }
+                    com.mycar.app.data.model.ReminderIntervalType.NONE -> ""
+                }
                 Text(
-                    text = item.partName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                val kmText = if (item.kmRemaining <= 0) "${formatNumber(Math.abs(item.kmRemaining))} کیلومتر گذشته" else "${formatNumber(item.kmRemaining)} کیلومتر مانده"
-                Text(
-                    text = kmText,
+                    text = descriptionText,
                     style = MaterialTheme.typography.bodySmall,
                     color = statusColor,
                     fontWeight = FontWeight.Medium
                 )
             }
+            Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))

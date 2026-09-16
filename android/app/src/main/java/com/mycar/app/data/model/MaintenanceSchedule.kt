@@ -16,5 +16,6 @@ data class MaintenanceSchedule(
     val timeIntervalMonths: Int,
     val warningThresholdKm: Int = 500,
     val warningThresholdDays: Int = 14,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val intervalType: ReminderIntervalType = ReminderIntervalType.COMBINED
 )

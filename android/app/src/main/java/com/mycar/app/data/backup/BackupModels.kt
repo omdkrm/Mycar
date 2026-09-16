@@ -95,7 +95,8 @@ data class MaintenanceScheduleBackupDto(
     val timeIntervalMonths: Int,
     val warningThresholdKm: Int = 500,
     val warningThresholdDays: Int = 14,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val intervalType: String = ReminderIntervalType.COMBINED.name
 )
 
 // Mapping functions between Room entities and Backup DTOs
@@ -225,7 +226,8 @@ fun MaintenanceSchedule.toBackupDto() = MaintenanceScheduleBackupDto(
     timeIntervalMonths = timeIntervalMonths,
     warningThresholdKm = warningThresholdKm,
     warningThresholdDays = warningThresholdDays,
-    isEnabled = isEnabled
+    isEnabled = isEnabled,
+    intervalType = intervalType.name
 )
 
 fun MaintenanceScheduleBackupDto.toEntity() = MaintenanceSchedule(
@@ -238,5 +240,6 @@ fun MaintenanceScheduleBackupDto.toEntity() = MaintenanceSchedule(
     timeIntervalMonths = timeIntervalMonths,
     warningThresholdKm = warningThresholdKm,
     warningThresholdDays = warningThresholdDays,
-    isEnabled = isEnabled
+    isEnabled = isEnabled,
+    intervalType = ReminderIntervalType.fromNameSafe(intervalType)
 )

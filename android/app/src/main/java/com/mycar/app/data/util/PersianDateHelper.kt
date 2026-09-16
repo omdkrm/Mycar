@@ -206,4 +206,43 @@ object PersianDateHelper {
     fun isValidJalaliDate(input: String): Boolean {
         return parseJalaliDate(input) != null
     }
+
+    /**
+     * Safely adds months to a Jalali date timestamp.
+     * Accurately handles month-end dates and leap years:
+     * - E.g. Farvardin 31 + 6 months -> Mehr 30 (since Mehr has 30 days)
+     * - E.g. Esfand 30 (leap year) + 12 months -> Esfand 29 (non-leap year)
+     * - E.g. 1403/06/25 + 12 months -> 1404/06/25 (exact annual renewal)
+     */
+    fun addJalaliMonths(timestampMillis: Long, months: Int): Long {
+        if (months <= 0) return timestampMillis
+        val j = timestampToJalali(timestampMillis)
+        val totalMonths = (j.year * 12) + (j.month - 1) + months
+        val newYear = totalMonths / 12
+        val newMonth = (totalMonths % 12) + 1
+        val maxDays = getDaysInMonth(newYear, newMonth)
+        val newDay = j.day.coerceAtMost(maxDays)
+        return jalaliToTimestamp(newYear, newMonth, newDay)
+    }
+
+    /**
+     * Calculates the calendar month difference between two timestamps.
+     */
+    fun monthsBetween(fromTimestamp: Long, toTimestamp: Long): Int {
+        if (toTimestamp <= fromTimestamp) return 1
+        val from = timestampToJalali(fromTimestamp)
+        val to = timestampToJalali(toTimestamp)
+        val diff = (to.year - from.year) * 12 + (to.month - from.month)
+        return diff.coerceAtLeast(1)
+    }
+
+    /**
+     * Calculates the whole days difference between two timestamps.
+     * Positive if toTimestamp is in the future relative to fromTimestamp,
+     * negative if toTimestamp is in the past.
+     */
+    fun daysBetween(fromTimestamp: Long, toTimestamp: Long): Int {
+        val diffMs = toTimestamp - fromTimestamp
+        return (diffMs / (1000L * 60 * 60 * 24)).toInt()
+    }
 }

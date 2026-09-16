@@ -21,8 +21,14 @@ data class ReminderItem(
     val dueMileage: Int,
     val dueDateTimestamp: Long,
     val lastServiceMileage: Int,
-    val lastServiceDateTimestamp: Long
-)
+    val lastServiceDateTimestamp: Long,
+    val intervalType: ReminderIntervalType = schedule.intervalType
+) {
+    val isTimeOnly: Boolean get() = intervalType == ReminderIntervalType.TIME
+    val isMileageOnly: Boolean get() = intervalType == ReminderIntervalType.MILEAGE
+    val isCombined: Boolean get() = intervalType == ReminderIntervalType.COMBINED
+    val isNone: Boolean get() = intervalType == ReminderIntervalType.NONE
+}
 
 data class VehicleStats(
     val totalExpense: Long,
@@ -66,10 +72,50 @@ class CarRepository(private val database: AppDatabase) {
                 timeIntervalMonths = item.defaultTimeIntervalMonths,
                 warningThresholdKm = 500,
                 warningThresholdDays = 14,
-                isEnabled = true
+                isEnabled = item.defaultIntervalType != ReminderIntervalType.NONE,
+                intervalType = item.defaultIntervalType
             )
         }
         scheduleDao.insertSchedules(initialSchedules)
+    }
+
+    suspend fun upsertSchedule(
+        vehicleId: String,
+        partName: String,
+        catalogItemId: String?,
+        category: String,
+        intervalType: ReminderIntervalType,
+        kmInterval: Int,
+        timeIntervalMonths: Int
+    ) {
+        val existing = scheduleDao.getSchedulesListForVehicle(vehicleId)
+            .find { (catalogItemId != null && it.catalogItemId == catalogItemId) || it.partName == partName }
+
+        if (existing != null) {
+            scheduleDao.updateSchedule(
+                existing.copy(
+                    intervalType = intervalType,
+                    kmInterval = if (intervalType == ReminderIntervalType.TIME || intervalType == ReminderIntervalType.NONE) 0 else kmInterval,
+                    timeIntervalMonths = if (intervalType == ReminderIntervalType.MILEAGE || intervalType == ReminderIntervalType.NONE) 0 else timeIntervalMonths,
+                    isEnabled = (intervalType != ReminderIntervalType.NONE)
+                )
+            )
+        } else if (intervalType != ReminderIntervalType.NONE) {
+            scheduleDao.insertSchedule(
+                MaintenanceSchedule(
+                    vehicleId = vehicleId,
+                    partName = partName,
+                    catalogItemId = catalogItemId,
+                    category = category,
+                    kmInterval = if (intervalType == ReminderIntervalType.TIME) 0 else kmInterval,
+                    timeIntervalMonths = if (intervalType == ReminderIntervalType.MILEAGE) 0 else timeIntervalMonths,
+                    warningThresholdKm = 500,
+                    warningThresholdDays = 14,
+                    isEnabled = true,
+                    intervalType = intervalType
+                )
+            )
+        }
     }
 
     suspend fun updateVehicle(vehicle: Vehicle) {
@@ -178,30 +224,57 @@ class CarRepository(private val database: AppDatabase) {
 
         val now = System.currentTimeMillis()
 
-        return schedules.map { schedule ->
+        return schedules.mapNotNull { schedule ->
+            val effectiveIntervalType = when {
+                schedule.intervalType != ReminderIntervalType.COMBINED -> schedule.intervalType
+                schedule.catalogItemId in listOf("cat-technical-inspection", "cat-third-party-insurance", "cat-body-insurance") ||
+                    schedule.partName.contains("بیمه") || schedule.partName.contains("معاینه") -> ReminderIntervalType.TIME
+                schedule.catalogItemId == "cat-fuel" || schedule.partName.contains("بنزین") -> ReminderIntervalType.NONE
+                else -> schedule.intervalType
+            }
+
+            if (effectiveIntervalType == ReminderIntervalType.NONE) {
+                return@mapNotNull null
+            }
+
             val matching = services
                 .filter { (schedule.catalogItemId != null && it.catalogItemId == schedule.catalogItemId) || it.partName == schedule.partName }
-                .sortedByDescending { it.mileage }
+                .sortedWith(compareByDescending<ServiceRecord> { it.dateTimestamp }.thenByDescending { it.mileage })
 
             val latest = matching.firstOrNull()
             val lastMileage = latest?.mileage ?: vehicle.currentMileage
             val lastDate = latest?.dateTimestamp ?: vehicle.createdAt
 
-            val dueMileage = lastMileage + schedule.kmInterval
-            val monthsMs = (schedule.timeIntervalMonths * 30.44 * 24 * 60 * 60 * 1000).toLong()
-            val dueDateTimestamp = lastDate + monthsMs
+            val kmInterval = schedule.kmInterval
+            val timeIntervalMonths = schedule.timeIntervalMonths
 
-            val kmRemaining = dueMileage - vehicle.currentMileage
-            val daysRemaining = ((dueDateTimestamp - now) / (1000 * 60 * 60 * 24)).toInt()
+            val dueMileage = if (effectiveIntervalType == ReminderIntervalType.TIME) 0 else lastMileage + kmInterval
+            val dueDateTimestamp = if (effectiveIntervalType == ReminderIntervalType.MILEAGE) 0L else com.mycar.app.data.util.PersianDateHelper.addJalaliMonths(lastDate, timeIntervalMonths)
 
-            val status = when {
-                kmRemaining <= 0 || daysRemaining < 0 -> ReminderStatus.OVERDUE
-                kmRemaining <= schedule.warningThresholdKm || daysRemaining <= schedule.warningThresholdDays -> ReminderStatus.APPROACHING
-                else -> ReminderStatus.HEALTHY
+            val kmRemaining = if (effectiveIntervalType == ReminderIntervalType.TIME) 0 else dueMileage - vehicle.currentMileage
+            val daysRemaining = if (effectiveIntervalType == ReminderIntervalType.MILEAGE) Int.MAX_VALUE else com.mycar.app.data.util.PersianDateHelper.daysBetween(now, dueDateTimestamp)
+
+            val status = when (effectiveIntervalType) {
+                ReminderIntervalType.TIME -> when {
+                    daysRemaining < 0 -> ReminderStatus.OVERDUE
+                    daysRemaining <= schedule.warningThresholdDays -> ReminderStatus.APPROACHING
+                    else -> ReminderStatus.HEALTHY
+                }
+                ReminderIntervalType.MILEAGE -> when {
+                    kmRemaining <= 0 -> ReminderStatus.OVERDUE
+                    kmRemaining <= schedule.warningThresholdKm -> ReminderStatus.APPROACHING
+                    else -> ReminderStatus.HEALTHY
+                }
+                ReminderIntervalType.COMBINED -> when {
+                    kmRemaining <= 0 || daysRemaining < 0 -> ReminderStatus.OVERDUE
+                    kmRemaining <= schedule.warningThresholdKm || daysRemaining <= schedule.warningThresholdDays -> ReminderStatus.APPROACHING
+                    else -> ReminderStatus.HEALTHY
+                }
+                ReminderIntervalType.NONE -> ReminderStatus.HEALTHY
             }
 
             ReminderItem(
-                schedule = schedule,
+                schedule = schedule.copy(intervalType = effectiveIntervalType),
                 partName = schedule.partName,
                 status = status,
                 kmRemaining = kmRemaining,
@@ -209,9 +282,20 @@ class CarRepository(private val database: AppDatabase) {
                 dueMileage = dueMileage,
                 dueDateTimestamp = dueDateTimestamp,
                 lastServiceMileage = lastMileage,
-                lastServiceDateTimestamp = lastDate
+                lastServiceDateTimestamp = lastDate,
+                intervalType = effectiveIntervalType
             )
-        }.sortedWith(compareBy({ it.status.ordinal }, { it.kmRemaining }))
+        }.sortedWith(
+            compareBy<ReminderItem> { it.status.ordinal }
+                .thenBy { item ->
+                    when (item.intervalType) {
+                        ReminderIntervalType.TIME -> item.daysRemaining
+                        ReminderIntervalType.MILEAGE -> item.kmRemaining / 100
+                        ReminderIntervalType.COMBINED -> minOf(item.daysRemaining, item.kmRemaining / 100)
+                        ReminderIntervalType.NONE -> Int.MAX_VALUE
+                    }
+                }
+        )
     }
 
     suspend fun calculateStats(vehicle: Vehicle): VehicleStats {
