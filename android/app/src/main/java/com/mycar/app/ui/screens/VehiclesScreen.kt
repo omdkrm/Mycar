@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.ui.theme.CyanPrimary
+import com.mycar.app.util.formatNumber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

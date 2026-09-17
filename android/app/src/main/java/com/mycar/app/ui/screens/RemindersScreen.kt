@@ -21,8 +21,7 @@ import com.mycar.app.data.repository.ReminderItem
 import com.mycar.app.data.repository.ReminderStatus
 import com.mycar.app.data.util.PersianDateHelper
 import com.mycar.app.ui.theme.*
-import java.text.NumberFormat
-import java.util.Locale
+import com.mycar.app.util.formatNumber
 
 @Composable
 fun RemindersScreen(
@@ -72,14 +71,6 @@ fun EmptyReminders() {
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "تمامی قطعات و سرویس‌های خودرو در وضعیت مناسبی قرار دارند.", style = MaterialTheme.typography.bodyMedium)
     }
-}
-
-fun formatNumber(number: Int): String {
-    return NumberFormat.getNumberInstance(Locale.US).format(number)
-}
-
-fun formatNumber(number: Long): String {
-    return NumberFormat.getNumberInstance(Locale.US).format(number)
 }
 
 @Composable

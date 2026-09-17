@@ -22,6 +22,7 @@ import com.mycar.app.data.model.FuelRecord
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.util.FuelCalculator
 import com.mycar.app.ui.theme.CyanPrimary
+import com.mycar.app.util.formatNumber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

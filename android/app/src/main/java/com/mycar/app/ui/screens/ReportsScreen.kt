@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.repository.VehicleStats
 import com.mycar.app.data.util.FuelCalculator
+import com.mycar.app.util.formatNumber
 
 @Composable
 fun ReportsScreen(

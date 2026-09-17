@@ -1,5 +1,6 @@
 package com.mycar.app.data.backup
 
+import com.mycar.app.data.model.ReminderIntervalType
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

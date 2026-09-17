@@ -25,8 +25,7 @@ import com.mycar.app.data.repository.ReminderStatus
 import com.mycar.app.data.repository.VehicleStats
 import com.mycar.app.data.util.FuelCalculator
 import com.mycar.app.ui.theme.*
-import java.text.NumberFormat
-import java.util.Locale
+import com.mycar.app.util.formatNumber
 
 @Composable
 fun DashboardScreen(
@@ -415,13 +414,5 @@ fun ReminderCard(item: ReminderItem, onClick: () -> Unit) {
             }
         }
     }
-}
-
-fun formatNumber(number: Long): String {
-    return NumberFormat.getNumberInstance(Locale.US).format(number)
-}
-
-fun formatNumber(number: Int): String {
-    return NumberFormat.getNumberInstance(Locale.US).format(number)
 }
 
