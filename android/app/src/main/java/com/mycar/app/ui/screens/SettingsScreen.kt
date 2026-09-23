@@ -179,21 +179,33 @@ fun SettingsScreen(
                                     val defaultFileName = "MyCar_Backup_${dateFormat.format(Date())}.json"
                                     createDocumentLauncher.launch(defaultFileName)
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 44.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = Color.White
                                 ),
-                                enabled = !isLoading
+                                enabled = !isLoading,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                             ) {
-                                Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "ایجاد نسخه پشتیبان",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Backup,
+                                        contentDescription = "ایجاد نسخه پشتیبان",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "ایجاد نسخه پشتیبان",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
 
                             // Import Button (بازیابی نسخه پشتیبان)
@@ -201,21 +213,33 @@ fun SettingsScreen(
                                 onClick = {
                                     openDocumentLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 44.dp),
                                 shape = RoundedCornerShape(10.dp),
                                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ),
-                                enabled = !isLoading
+                                enabled = !isLoading,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                             ) {
-                                Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "بازیابی نسخه پشتیبان",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Restore,
+                                        contentDescription = "بازیابی نسخه پشتیبان",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "بازیابی نسخه پشتیبان",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }

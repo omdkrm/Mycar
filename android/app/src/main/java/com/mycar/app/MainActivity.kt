@@ -63,6 +63,17 @@ class MainActivity : ComponentActivity() {
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                 },
+                                actions = {
+                                    IconButton(
+                                        onClick = { currentScreen = Screen.SETTINGS }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = "تنظیمات",
+                                            tint = if (currentScreen == Screen.SETTINGS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                },
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     titleContentColor = MaterialTheme.colorScheme.onSurface
@@ -124,6 +135,9 @@ class MainActivity : ComponentActivity() {
                                     onSelectVehicle = { viewModel.selectVehicle(it) },
                                     onAddVehicle = { name, model, year, plate, km, cap, fuel, col ->
                                         viewModel.addVehicle(name, model, year, plate, km, cap, fuel, col)
+                                    },
+                                    onUpdateVehicle = { updatedVehicle ->
+                                        viewModel.updateVehicle(updatedVehicle)
                                     },
                                     onDeleteVehicle = { viewModel.deleteVehicle(it) }
                                 )

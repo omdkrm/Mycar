@@ -24,6 +24,7 @@ import com.mycar.app.data.repository.ReminderItem
 import com.mycar.app.data.repository.ReminderStatus
 import com.mycar.app.data.repository.VehicleStats
 import com.mycar.app.data.util.FuelCalculator
+import com.mycar.app.ui.components.IranPlateBadge
 import com.mycar.app.ui.theme.*
 import com.mycar.app.util.formatNumber
 
@@ -229,12 +230,8 @@ fun ActiveVehicleCard(vehicle: Vehicle, onSwitchVehicle: () -> Unit) {
                     )
                 }
                 if (vehicle.plateNumber.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "پلاک: ${vehicle.plateNumber}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    IranPlateBadge(plateNumber = vehicle.plateNumber)
                 }
             }
             IconButton(onClick = onSwitchVehicle) {
