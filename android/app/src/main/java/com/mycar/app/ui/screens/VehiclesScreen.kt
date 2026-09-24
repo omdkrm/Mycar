@@ -19,9 +19,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.ui.components.IranPlate
 import com.mycar.app.ui.components.IranPlateBadge
@@ -218,8 +221,8 @@ fun VehicleItemCard(
 
 /**
  * Dialog for adding or editing a vehicle.
- * LocalLayoutDirection = LayoutDirection.Rtl is explicitly applied at the root
- * and across all dialog slots to guarantee RTL presentation from the very first frame without flicker.
+ * Refactored to have a SINGLE RTL root via Dialog and CompositionLocalProvider,
+ * ensuring Persian RTL presentation from the very first frame without any layout flash or jumps.
  */
 @Composable
 fun VehicleFormDialog(
@@ -252,9 +255,9 @@ fun VehicleFormDialog(
     var iranPlate by remember {
         mutableStateOf(
             initialParsedPlate ?: IranPlate(
-                threeDigits = "",
-                letter = "ب",
                 twoDigits = "",
+                letter = "ب",
+                threeDigits = "",
                 provinceCode = "",
                 type = PlateType.PERSONAL
             )
@@ -263,27 +266,48 @@ fun VehicleFormDialog(
 
     var validationError by remember { mutableStateOf<String?>(null) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 24.dp)
+                    .widthIn(max = 480.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    // Dialog Title
                     Text(
                         text = if (isEditing) "ویرایش خودرو" else "ثبت خودرو جدید",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Right,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                }
-            },
-            text = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Scrollable form fields
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedTextField(
                             value = name,
@@ -293,7 +317,10 @@ fun VehicleFormDialog(
                             },
                             label = { Text("نام خودرو (مثال: سمند EF7)") },
                             singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl),
+                            textStyle = LocalTextStyle.current.copy(
+                                textAlign = TextAlign.Right,
+                                textDirection = TextDirection.Rtl
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
@@ -302,13 +329,16 @@ fun VehicleFormDialog(
                             onValueChange = { model = it },
                             label = { Text("تیپ / مدل") },
                             singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl),
+                            textStyle = LocalTextStyle.current.copy(
+                                textAlign = TextAlign.Right,
+                                textDirection = TextDirection.Rtl
+                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             OutlinedTextField(
                                 value = year,
@@ -321,7 +351,10 @@ fun VehicleFormDialog(
                                 label = { Text("سال ساخت") },
                                 placeholder = { Text("مثال: 1402") },
                                 singleLine = true,
-                                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                                textStyle = LocalTextStyle.current.copy(
+                                    textAlign = TextAlign.Left,
+                                    textDirection = TextDirection.Ltr
+                                ),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f)
                             )
@@ -334,7 +367,10 @@ fun VehicleFormDialog(
                                 label = { Text("کارکرد (کیلومتر)") },
                                 placeholder = { Text("مثال: 45000") },
                                 singleLine = true,
-                                textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                                textStyle = LocalTextStyle.current.copy(
+                                    textAlign = TextAlign.Left,
+                                    textDirection = TextDirection.Ltr
+                                ),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f)
                             )
@@ -388,53 +424,70 @@ fun VehicleFormDialog(
                                 text = validationError ?: "",
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Right,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Buttons Row: Cancel and Confirm in unified RTL row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = "انصراف",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (name.isBlank()) {
+                                    validationError = "لطفاً نام خودرو را وارد کنید."
+                                    return@Button
+                                }
+
+                                // Validate Iranian License Plate
+                                val finalPlate: String
+                                if (iranPlate.isPartiallyFilled) {
+                                    if (!iranPlate.isValid) {
+                                        validationError = "لطفاً تمام بخش‌های پلاک ملی (۲ رقم، ۱ حرف، ۳ رقم و کد استان) را به طور کامل وارد نمایید."
+                                        return@Button
+                                    }
+                                    finalPlate = iranPlate.toNormalizedString()
+                                } else if (existingUnparsedPlate.isNotBlank()) {
+                                    // Keep old unparsed plate safe if untouched
+                                    finalPlate = existingUnparsedPlate
+                                } else {
+                                    finalPlate = ""
+                                }
+
+                                val km = mileageStr.toIntOrNull() ?: 0
+                                val cap = capacityStr.toDoubleOrNull() ?: 50.0
+                                onSave(name.trim(), model.trim(), year.trim(), finalPlate, km, cap, fuelType, color.trim())
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(
+                                text = if (isEditing) "ذخیره تغییرات" else "ثبت خودرو",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
-            },
-            confirmButton = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Button(
-                        onClick = {
-                            if (name.isBlank()) {
-                                validationError = "لطفاً نام خودرو را وارد کنید."
-                                return@Button
-                            }
-
-                            // Validate Iranian License Plate
-                            val finalPlate: String
-                            if (iranPlate.isPartiallyFilled) {
-                                if (!iranPlate.isValid) {
-                                    validationError = "لطفاً تمام بخش‌های پلاک ملی (۳ رقم، ۱ حرف، ۲ رقم و کد استان) را به طور کامل وارد نمایید."
-                                    return@Button
-                                }
-                                finalPlate = iranPlate.toNormalizedString()
-                            } else if (existingUnparsedPlate.isNotBlank()) {
-                                // Keep old unparsed plate safe if untouched
-                                finalPlate = existingUnparsedPlate
-                            } else {
-                                finalPlate = ""
-                            }
-
-                            val km = mileageStr.toIntOrNull() ?: 0
-                            val cap = capacityStr.toDoubleOrNull() ?: 50.0
-                            onSave(name.trim(), model.trim(), year.trim(), finalPlate, km, cap, fuelType, color.trim())
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(if (isEditing) "ذخیره تغییرات" else "ثبت خودرو", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    TextButton(onClick = onDismiss) {
-                        Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
             }
-        )
+        }
     }
 }

@@ -292,7 +292,7 @@ export const VehicleFormModal: React.FC<VehicleFormModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="مثال: ۵۲ ل ۹۸۵ - ۱۱"
+                placeholder="مثال: ۱۲ ب ۳۶۵ ایران ۳۳"
                 value={licensePlate}
                 onChange={(e) => setLicensePlate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-center font-bold"

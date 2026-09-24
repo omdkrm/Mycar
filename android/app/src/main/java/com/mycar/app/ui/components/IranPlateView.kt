@@ -70,35 +70,36 @@ enum class PlateType(
 }
 
 /**
- * Model representing the 4 components of an Iranian national license plate.
+ * Model representing the 4 components of an Iranian national license plate:
+ * Physical order: [BLUE BAND] [2 DIGITS] [LETTER] [3 DIGITS] [PROVINCE CODE]
  */
 data class IranPlate(
-    val threeDigits: String = "",   // e.g. "123" (stored as normalized ASCII digits)
-    val letter: String = "ب",        // e.g. "ب"
-    val twoDigits: String = "",     // e.g. "45"
-    val provinceCode: String = "",  // e.g. "12"
+    val twoDigits: String = "",     // 2 digits BEFORE the letter (e.g. "12")
+    val letter: String = "ب",       // 1 valid Persian plate letter
+    val threeDigits: String = "",   // 3 digits AFTER the letter (e.g. "365")
+    val provinceCode: String = "",  // 2-digit province code in right box (e.g. "33")
     val type: PlateType = PlateType.PERSONAL
 ) {
     val isValid: Boolean
-        get() = threeDigits.length == 3 &&
-                threeDigits.all { it.isDigit() } &&
-                letter in VALID_LETTERS &&
-                twoDigits.length == 2 &&
+        get() = twoDigits.length == 2 &&
                 twoDigits.all { it.isDigit() } &&
+                letter in VALID_LETTERS &&
+                threeDigits.length == 3 &&
+                threeDigits.all { it.isDigit() } &&
                 provinceCode.length == 2 &&
                 provinceCode.all { it.isDigit() }
 
     val isPartiallyFilled: Boolean
-        get() = threeDigits.isNotEmpty() || twoDigits.isNotEmpty() || provinceCode.isNotEmpty()
+        get() = twoDigits.isNotEmpty() || threeDigits.isNotEmpty() || provinceCode.isNotEmpty()
 
     /**
      * Formats the plate into the standard Persian string representation:
-     * e.g. "۱۲۳ ب ۴۵ ایران ۱۲"
+     * e.g. "۱۲ ب ۳۶۵ ایران ۳۳"
      */
     fun toNormalizedString(): String {
         if (!isValid) return ""
-        val p1 = IranPlateParser.toPersianDigits(threeDigits)
-        val p2 = IranPlateParser.toPersianDigits(twoDigits)
+        val p1 = IranPlateParser.toPersianDigits(twoDigits)
+        val p2 = IranPlateParser.toPersianDigits(threeDigits)
         val prov = IranPlateParser.toPersianDigits(provinceCode)
         return "$p1 $letter $p2 ایران $prov"
     }
@@ -137,51 +138,65 @@ object IranPlateParser {
 
     /**
      * Parses an Iranian license plate from a raw stored string.
-     * Supports formats like:
-     * - "۱۲۳ ب ۴۵ ایران ۱۲" or "123 ب 45 ایران 12"
-     * - "۴۵ ب ۱۲۳ ایران ۱۲" or "45 ب 123 ایران 12"
-     * - "123ب45-12" or "۱۲۳ب۴۵-۱۲"
-     * - "ایران 12 - 123 ب 45"
+     * Fully backward compatible with old stored structures and flexible user entries:
+     * - New standard: "12 ب 365 ایران 33" or "۱۲ ب ۳۶۵ ایران ۳۳"
+     * - Old stored format: "365 ب 12 ایران 33" or "123 ب 45 ایران 12"
+     * - Compact formats: "12ب365-33" or "365ب12-33"
+     * - Iran prefix formats: "ایران 33 12 ب 365"
      */
     fun parse(raw: String): IranPlate? {
         if (raw.isBlank()) return null
         val normalized = toEnglishDigits(raw.trim())
 
-        // Pattern 1: 3 digits, letter, 2 digits, (ایران or - or space), 2 digits
-        val p1Regex = Regex("""(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
-        val m1 = p1Regex.find(normalized)
-        if (m1 != null) {
-            val (three, letter, two, prov) = m1.destructured
+        // Format A: 2 digits, letter, 3 digits, (ایران or - or space), 2 digits
+        // e.g. "12 ب 365 ایران 33" or "12ب365-33"
+        val pA = Regex("""(\d{2})\s*([بجدسصطقلمنوهی])\s*(\d{3})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
+        val mA = pA.find(normalized)
+        if (mA != null) {
+            val (two, letter, three, prov) = mA.destructured
             return IranPlate(
-                threeDigits = three,
-                letter = letter,
                 twoDigits = two,
+                letter = letter,
+                threeDigits = three,
                 provinceCode = prov
             )
         }
 
-        // Pattern 2: 2 digits, letter, 3 digits, (ایران or - or space), 2 digits
-        val p2Regex = Regex("""(\d{2})\s*([بجدسصطقلمنوهی])\s*(\d{3})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
-        val m2 = p2Regex.find(normalized)
-        if (m2 != null) {
-            val (two, letter, three, prov) = m2.destructured
+        // Format B: Old stored format: 3 digits, letter, 2 digits, (ایران or - or space), 2 digits
+        // e.g. "365 ب 12 ایران 33" or "123 ب 45 ایران 12"
+        val pB = Regex("""(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
+        val mB = pB.find(normalized)
+        if (mB != null) {
+            val (three, letter, two, prov) = mB.destructured
             return IranPlate(
-                threeDigits = three,
-                letter = letter,
                 twoDigits = two,
+                letter = letter,
+                threeDigits = three,
                 provinceCode = prov
             )
         }
 
-        // Pattern 3: ایران 12 - 123 ب 45 or 12 ایران 123 ب 45
-        val p3Regex = Regex("""(?:ایران\s*)?(\d{2})\s*(?:ایران\s*|-)?\s*(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})""")
-        val m3 = p3Regex.find(normalized)
-        if (m3 != null) {
-            val (prov, three, letter, two) = m3.destructured
+        // Format C: Iran prefix: ایران 33 12 ب 365 or ایران 12 - 123 ب 45
+        val pC = Regex("""(?:ایران\s*)?(\d{2})\s*(?:ایران\s*|-)?\s*(\d{2})\s*([بجدسصطقلمنوهی])\s*(\d{3})""")
+        val mC = pC.find(normalized)
+        if (mC != null) {
+            val (prov, two, letter, three) = mC.destructured
             return IranPlate(
-                threeDigits = three,
-                letter = letter,
                 twoDigits = two,
+                letter = letter,
+                threeDigits = three,
+                provinceCode = prov
+            )
+        }
+
+        val pD = Regex("""(?:ایران\s*)?(\d{2})\s*(?:ایران\s*|-)?\s*(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})""")
+        val mD = pD.find(normalized)
+        if (mD != null) {
+            val (prov, three, letter, two) = mD.destructured
+            return IranPlate(
+                twoDigits = two,
+                letter = letter,
+                threeDigits = three,
                 provinceCode = prov
             )
         }
@@ -192,8 +207,9 @@ object IranPlateParser {
 
 /**
  * Interactive Iranian National Vehicle License Plate Input Component.
- * Formatted as:
- * [Blue Strip IRAN] [3 Digits] [Letter] [2 Digits] | [ایران / Province Code]
+ * Formatted physically from left to right as:
+ * [Blue Band IRAN] [2 Digits] [Letter] [3 Digits] | [ایران / Province Code]
+ * E.g.: BLUE | ۱۲ | ب | ۳۶۵ | ایران ۳۳
  */
 @Composable
 fun IranPlateInput(
@@ -204,8 +220,8 @@ fun IranPlateInput(
     var showLetterPicker by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
-    val threeDigitsRequester = remember { FocusRequester() }
     val twoDigitsRequester = remember { FocusRequester() }
+    val threeDigitsRequester = remember { FocusRequester() }
     val provinceRequester = remember { FocusRequester() }
 
     Column(
@@ -227,13 +243,13 @@ fun IranPlateInput(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "نمونه: ۱۲۳ ب ۴۵ ایران ۱۲",
+                text = "نمونه: ۱۲ ب ۳۶۵ ایران ۳۳",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        // Plate Frame (Uses LTR internally for authentic Iranian plate layout)
+        // Plate Frame (Uses LTR explicitly for authentic physical Iranian plate layout)
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Card(
                 modifier = Modifier
@@ -250,7 +266,7 @@ fun IranPlateInput(
                     // 1. Blue Strip (Leftmost: I.R. IRAN + Flag)
                     Box(
                         modifier = Modifier
-                            .width(32.dp)
+                            .width(34.dp)
                             .fillMaxHeight()
                             .background(Color(0xFF003399)),
                         contentAlignment = Alignment.Center
@@ -303,22 +319,22 @@ fun IranPlateInput(
                         }
                     }
 
-                    // 2. Three Digits Section (e.g. 123)
+                    // 2. Two Digits Section (e.g. 12 / ۱۲ before the letter)
                     Box(
                         modifier = Modifier
-                            .weight(1.3f)
+                            .weight(1.05f)
                             .fillMaxHeight()
-                            .clickable { threeDigitsRequester.requestFocus() },
+                            .clickable { twoDigitsRequester.requestFocus() },
                         contentAlignment = Alignment.Center
                     ) {
                         BasicTextField(
-                            value = IranPlateParser.toPersianDigits(plate.threeDigits),
+                            value = IranPlateParser.toPersianDigits(plate.twoDigits),
                             onValueChange = { input ->
                                 val english = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
-                                if (english.length <= 3) {
-                                    onPlateChange(plate.copy(threeDigits = english))
-                                    if (english.length == 3) {
-                                        twoDigitsRequester.requestFocus()
+                                if (english.length <= 2) {
+                                    onPlateChange(plate.copy(twoDigits = english))
+                                    if (english.length == 2) {
+                                        threeDigitsRequester.requestFocus()
                                     }
                                 }
                             },
@@ -335,17 +351,17 @@ fun IranPlateInput(
                                 imeAction = ImeAction.Next
                             ),
                             keyboardActions = KeyboardActions(
-                                onNext = { twoDigitsRequester.requestFocus() }
+                                onNext = { threeDigitsRequester.requestFocus() }
                             ),
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(threeDigitsRequester)
+                                .focusRequester(twoDigitsRequester)
                         )
 
-                        if (plate.threeDigits.isEmpty()) {
+                        if (plate.twoDigits.isEmpty()) {
                             Text(
-                                text = "۱۲۳",
+                                text = "۱۲",
                                 style = TextStyle(
                                     color = Color.LightGray,
                                     fontSize = 20.sp,
@@ -356,7 +372,7 @@ fun IranPlateInput(
                         }
                     }
 
-                    // Divider
+                    // Divider between 2 digits and letter
                     Box(
                         modifier = Modifier
                             .width(1.dp)
@@ -395,7 +411,7 @@ fun IranPlateInput(
                         }
                     }
 
-                    // Divider
+                    // Divider between letter and 3 digits
                     Box(
                         modifier = Modifier
                             .width(1.dp)
@@ -403,21 +419,21 @@ fun IranPlateInput(
                             .background(Color(0xFFE2E8F0))
                     )
 
-                    // 4. Two Digits Section (e.g. 45)
+                    // 4. Three Digits Section (e.g. 365 / ۳۶۵ after the letter)
                     Box(
                         modifier = Modifier
-                            .weight(1.1f)
+                            .weight(1.35f)
                             .fillMaxHeight()
-                            .clickable { twoDigitsRequester.requestFocus() },
+                            .clickable { threeDigitsRequester.requestFocus() },
                         contentAlignment = Alignment.Center
                     ) {
                         BasicTextField(
-                            value = IranPlateParser.toPersianDigits(plate.twoDigits),
+                            value = IranPlateParser.toPersianDigits(plate.threeDigits),
                             onValueChange = { input ->
                                 val english = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
-                                if (english.length <= 2) {
-                                    onPlateChange(plate.copy(twoDigits = english))
-                                    if (english.length == 2) {
+                                if (english.length <= 3) {
+                                    onPlateChange(plate.copy(threeDigits = english))
+                                    if (english.length == 3) {
                                         provinceRequester.requestFocus()
                                     }
                                 }
@@ -440,12 +456,12 @@ fun IranPlateInput(
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(twoDigitsRequester)
+                                .focusRequester(threeDigitsRequester)
                         )
 
-                        if (plate.twoDigits.isEmpty()) {
+                        if (plate.threeDigits.isEmpty()) {
                             Text(
-                                text = "۴۵",
+                                text = "۳۶۵",
                                 style = TextStyle(
                                     color = Color.LightGray,
                                     fontSize = 20.sp,
@@ -528,7 +544,7 @@ fun IranPlateInput(
 
                                 if (plate.provinceCode.isEmpty()) {
                                     Text(
-                                        text = "۱۲",
+                                        text = "۳۳",
                                         style = TextStyle(
                                             color = Color.LightGray,
                                             fontSize = 18.sp,
@@ -552,7 +568,7 @@ fun IranPlateInput(
             onLetterSelected = { letter ->
                 onPlateChange(plate.copy(letter = letter))
                 showLetterPicker = false
-                twoDigitsRequester.requestFocus()
+                threeDigitsRequester.requestFocus()
             },
             onDismiss = { showLetterPicker = false }
         )
@@ -735,15 +751,15 @@ fun IranPlateBadge(
                         }
                     }
 
-                    // 3 Digits
+                    // 2 Digits (before the letter)
                     Box(
                         modifier = Modifier
-                            .weight(1.2f)
+                            .weight(1f)
                             .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = IranPlateParser.toPersianDigits(parsed.threeDigits),
+                            text = IranPlateParser.toPersianDigits(parsed.twoDigits),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = parsed.type.textColor
@@ -765,15 +781,15 @@ fun IranPlateBadge(
                         )
                     }
 
-                    // 2 Digits
+                    // 3 Digits (after the letter)
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.3f)
                             .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = IranPlateParser.toPersianDigits(parsed.twoDigits),
+                            text = IranPlateParser.toPersianDigits(parsed.threeDigits),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = parsed.type.textColor
