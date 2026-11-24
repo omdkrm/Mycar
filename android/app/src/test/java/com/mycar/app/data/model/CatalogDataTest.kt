@@ -81,9 +81,10 @@ class CatalogDataTest {
         assertEquals("cat-engine-oil", exact?.id)
 
         // Exact match with Arabic Yeh should also work
-        val exactArabic = CatalogData.findExactMatch("روغني موتور")
+        // ("فیلتر روغن" typed with Arabic Yeh U+064A instead of Persian Yeh U+06CC)
+        val exactArabic = CatalogData.findExactMatch("ف\u064Aلتر روغن")
         assertNotNull(exactArabic)
-        assertEquals("cat-engine-oil", exactArabic?.id)
+        assertEquals("cat-oil-filter", exactArabic?.id)
 
         // Partial or modified text is NOT an exact match
         val partial = CatalogData.findExactMatch("روغن موتور بهران")
