@@ -205,10 +205,40 @@ class CarRepository(private val database: AppDatabase) {
         }
     }
 
+    suspend fun updateFuelRecord(fuelRecord: FuelRecord, updateMileage: Boolean = true) {
+        // Save the edited record first, then recompute every interval of this vehicle,
+        // because changing mileage/liters/date can affect neighbouring records too.
+        fuelDao.updateFuelRecord(fuelRecord)
+        recalculateFuelConsumption(fuelRecord.vehicleId)
+
+        if (updateMileage) {
+            val vehicle = vehicleDao.getVehicleById(fuelRecord.vehicleId)
+            if (vehicle != null && fuelRecord.mileage > vehicle.currentMileage) {
+                vehicleDao.updateVehicle(vehicle.copy(currentMileage = fuelRecord.mileage))
+                mileageDao.insertMileageRecord(
+                    MileageRecord(
+                        vehicleId = vehicle.id,
+                        mileage = fuelRecord.mileage,
+                        dateTimestamp = fuelRecord.dateTimestamp,
+                        note = "سوخت‌گیری"
+                    )
+                )
+            }
+        }
+    }
+
     suspend fun deleteFuelRecord(record: FuelRecord) {
         fuelDao.deleteFuelRecord(record)
-        val remainingRecords = fuelDao.getFuelRecordsListForVehicle(record.vehicleId)
-        val validSorted = remainingRecords.filter { it.liters > 0.0 && it.mileage > 0 }
+        recalculateFuelConsumption(record.vehicleId)
+    }
+
+    /**
+     * Recomputes the per-record consumption of all valid fuel records of a vehicle
+     * and persists only the values that actually changed.
+     */
+    private suspend fun recalculateFuelConsumption(vehicleId: String) {
+        val records = fuelDao.getFuelRecordsListForVehicle(vehicleId)
+        val validSorted = records.filter { it.liters > 0.0 && it.mileage > 0 }
             .sortedWith(compareBy<FuelRecord> { it.mileage }.thenBy { it.dateTimestamp })
         for (item in validSorted) {
             val updated = FuelCalculator.calculateIntervalConsumption(item, validSorted)

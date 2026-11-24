@@ -19,7 +19,27 @@ class IranPlateTest {
         assertEquals("365", parsed?.threeDigits)
         assertEquals("33", parsed?.provinceCode)
         assertTrue(parsed?.isValid == true)
-        assertEquals("۱۲ ب ۳۶۵ ایران ۳۳", parsed?.toNormalizedString())
+        assertEquals("۱۲ | ب | ۳۶۵ | ۳۳", parsed?.toNormalizedString())
+    }
+
+    @Test
+    fun testParseStandardPipeFormat() {
+        // Current standard: blue strip | 2 digits | letter | 3 digits | province code
+        val raw = "۱۲ | ب | ۳۶۵ | ۳۳"
+        val parsed = IranPlateParser.parse(raw)
+        assertNotNull("Should parse the standard pipe-separated plate", parsed)
+        assertEquals("12", parsed?.twoDigits)
+        assertEquals("ب", parsed?.letter)
+        assertEquals("365", parsed?.threeDigits)
+        assertEquals("33", parsed?.provinceCode)
+        assertEquals(raw, parsed?.toNormalizedString())
+    }
+
+    @Test
+    fun testNormalizedStringRoundTrip() {
+        val plate = IranPlate(twoDigits = "12", letter = "ب", threeDigits = "365", provinceCode = "33")
+        val reparsed = IranPlateParser.parse(plate.toNormalizedString())
+        assertEquals(plate, reparsed)
     }
 
     @Test
@@ -32,7 +52,7 @@ class IranPlateTest {
         assertEquals("365", parsed?.threeDigits)
         assertEquals("33", parsed?.provinceCode)
         assertTrue(parsed?.isValid == true)
-        assertEquals("۱۲ ب ۳۶۵ ایران ۳۳", parsed?.toNormalizedString())
+        assertEquals("۱۲ | ب | ۳۶۵ | ۳۳", parsed?.toNormalizedString())
     }
 
     @Test
@@ -46,7 +66,7 @@ class IranPlateTest {
         assertEquals("365", parsed?.threeDigits)
         assertEquals("33", parsed?.provinceCode)
         assertTrue(parsed?.isValid == true)
-        assertEquals("۱۲ ب ۳۶۵ ایران ۳۳", parsed?.toNormalizedString())
+        assertEquals("۱۲ | ب | ۳۶۵ | ۳۳", parsed?.toNormalizedString())
     }
 
     @Test

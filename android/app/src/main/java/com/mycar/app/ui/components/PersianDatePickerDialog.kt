@@ -104,17 +104,16 @@ fun PersianDatePickerDialog(
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(24.dp)),
+                modifier = AppDialogDefaults.frame(),
+                shape = AppShapes.Dialog,
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                shadowElevation = 12.dp
+                tonalElevation = AppDialogDefaults.Elevation,
+                shadowElevation = AppDialogDefaults.ShadowElevation
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(AppDialogDefaults.ContentPadding),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header: Title & Selected Date Preview
@@ -445,7 +444,7 @@ fun PersianDatePickerDialog(
                     ) {
                         TextButton(
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = AppShapes.Button
                         ) {
                             Text(
                                 text = "انصراف",

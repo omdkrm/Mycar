@@ -23,9 +23,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.mycar.app.ui.components.AppShapes
 import com.mycar.app.data.model.Vehicle
+import com.mycar.app.ui.components.AppDialog
 import com.mycar.app.ui.components.IranPlate
 import com.mycar.app.ui.components.IranPlateBadge
 import com.mycar.app.ui.components.IranPlateInput
@@ -133,7 +133,7 @@ fun EmptyVehicles(onAddClick: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(20.dp))
         Button(
             onClick = onAddClick,
-            shape = RoundedCornerShape(12.dp),
+            shape = AppShapes.Button,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
@@ -155,7 +155,7 @@ fun VehicleItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSelect() },
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.surface
@@ -221,8 +221,7 @@ fun VehicleItemCard(
 
 /**
  * Dialog for adding or editing a vehicle.
- * Refactored to have a SINGLE RTL root via Dialog and CompositionLocalProvider,
- * ensuring Persian RTL presentation from the very first frame without any layout flash or jumps.
+ * Built on the shared [AppDialog] so it looks and behaves exactly like every other dialog.
  */
 @Composable
 fun VehicleFormDialog(
@@ -266,228 +265,158 @@ fun VehicleFormDialog(
 
     var validationError by remember { mutableStateOf<String?>(null) }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
+    val handleSave: () -> Unit = {
+        if (name.isBlank()) {
+            validationError = "لطفاً نام خودرو را وارد کنید."
+        } else {
+            // Validate Iranian License Plate: blue strip | 2 digits | letter | 3 digits | province code
+            var finalPlate = ""
+            var plateOk = true
+            if (iranPlate.isPartiallyFilled) {
+                if (iranPlate.isValid) {
+                    finalPlate = iranPlate.toNormalizedString()
+                } else {
+                    validationError = "لطفاً تمام بخش‌های پلاک (۲ رقم، ۱ حرف، ۳ رقم و کد استان) را کامل وارد کنید."
+                    plateOk = false
+                }
+            } else if (existingUnparsedPlate.isNotBlank()) {
+                // Keep an old, unparsable plate untouched if the user did not edit it
+                finalPlate = existingUnparsedPlate
+            }
+
+            if (plateOk) {
+                val km = mileageStr.toIntOrNull() ?: 0
+                val cap = capacityStr.toDoubleOrNull() ?: 50.0
+                onSave(name.trim(), model.trim(), year.trim(), finalPlate, km, cap, fuelType, color.trim())
+            }
+        }
+    }
+
+    AppDialog(
+        title = if (isEditing) "ویرایش خودرو" else "ثبت خودرو جدید",
+        onDismiss = onDismiss,
+        confirmText = if (isEditing) "ذخیره تغییرات" else "ثبت خودرو",
+        onConfirm = handleSave
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
-                    .widthIn(max = 480.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                shadowElevation = 8.dp
+        OutlinedTextField(
+            value = name,
+            onValueChange = {
+                name = it
+                validationError = null
+            },
+            label = { Text("نام خودرو (مثال: سمند EF7)") },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                textAlign = TextAlign.Right,
+                textDirection = TextDirection.Rtl
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = model,
+            onValueChange = { model = it },
+            label = { Text("تیپ / مدل") },
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                textAlign = TextAlign.Right,
+                textDirection = TextDirection.Rtl
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedTextField(
+                value = year,
+                onValueChange = { input ->
+                    val digitsOnly = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
+                    if (digitsOnly.length <= 4) {
+                        year = digitsOnly
+                    }
+                },
+                label = { Text("سال ساخت") },
+                placeholder = { Text("مثال: 1402") },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(
+                    textAlign = TextAlign.Left,
+                    textDirection = TextDirection.Ltr
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = mileageStr,
+                onValueChange = { input ->
+                    val digitsOnly = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
+                    mileageStr = digitsOnly
+                },
+                label = { Text("کارکرد (کیلومتر)") },
+                placeholder = { Text("مثال: 45000") },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(
+                    textAlign = TextAlign.Left,
+                    textDirection = TextDirection.Ltr
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Structured Iranian National License Plate Component
+        Divider(
+            modifier = Modifier.padding(vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+
+        if (existingUnparsedPlate.isNotBlank() && !iranPlate.isPartiallyFilled) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = AppShapes.Card,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp)
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Dialog Title
                     Text(
-                        text = if (isEditing) "ویرایش خودرو" else "ثبت خودرو جدید",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Right,
-                        modifier = Modifier.fillMaxWidth()
+                        text = "پلاک فعلی: $existingUnparsedPlate",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Scrollable form fields
-                    Column(
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = {
-                                name = it
-                                validationError = null
-                            },
-                            label = { Text("نام خودرو (مثال: سمند EF7)") },
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(
-                                textAlign = TextAlign.Right,
-                                textDirection = TextDirection.Rtl
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = model,
-                            onValueChange = { model = it },
-                            label = { Text("تیپ / مدل") },
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(
-                                textAlign = TextAlign.Right,
-                                textDirection = TextDirection.Rtl
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = year,
-                                onValueChange = { input ->
-                                    val digitsOnly = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
-                                    if (digitsOnly.length <= 4) {
-                                        year = digitsOnly
-                                    }
-                                },
-                                label = { Text("سال ساخت") },
-                                placeholder = { Text("مثال: 1402") },
-                                singleLine = true,
-                                textStyle = LocalTextStyle.current.copy(
-                                    textAlign = TextAlign.Left,
-                                    textDirection = TextDirection.Ltr
-                                ),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = mileageStr,
-                                onValueChange = { input ->
-                                    val digitsOnly = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
-                                    mileageStr = digitsOnly
-                                },
-                                label = { Text("کارکرد (کیلومتر)") },
-                                placeholder = { Text("مثال: 45000") },
-                                singleLine = true,
-                                textStyle = LocalTextStyle.current.copy(
-                                    textAlign = TextAlign.Left,
-                                    textDirection = TextDirection.Ltr
-                                ),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        // Structured Iranian National License Plate Component
-                        Divider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
-
-                        if (existingUnparsedPlate.isNotBlank() && !iranPlate.isPartiallyFilled) {
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = "پلاک فعلی: $existingUnparsedPlate",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "(قالب قدیمی)",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-
-                        IranPlateInput(
-                            plate = iranPlate,
-                            onPlateChange = {
-                                iranPlate = it
-                                validationError = null
-                            }
-                        )
-
-                        if (validationError != null) {
-                            Text(
-                                text = validationError ?: "",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Right,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Buttons Row: Cancel and Confirm in unified RTL row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = onDismiss,
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text(
-                                text = "انصراف",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                if (name.isBlank()) {
-                                    validationError = "لطفاً نام خودرو را وارد کنید."
-                                    return@Button
-                                }
-
-                                // Validate Iranian License Plate
-                                val finalPlate: String
-                                if (iranPlate.isPartiallyFilled) {
-                                    if (!iranPlate.isValid) {
-                                        validationError = "لطفاً تمام بخش‌های پلاک ملی (۲ رقم، ۱ حرف، ۳ رقم و کد استان) را به طور کامل وارد نمایید."
-                                        return@Button
-                                    }
-                                    finalPlate = iranPlate.toNormalizedString()
-                                } else if (existingUnparsedPlate.isNotBlank()) {
-                                    // Keep old unparsed plate safe if untouched
-                                    finalPlate = existingUnparsedPlate
-                                } else {
-                                    finalPlate = ""
-                                }
-
-                                val km = mileageStr.toIntOrNull() ?: 0
-                                val cap = capacityStr.toDoubleOrNull() ?: 50.0
-                                onSave(name.trim(), model.trim(), year.trim(), finalPlate, km, cap, fuelType, color.trim())
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text(
-                                text = if (isEditing) "ذخیره تغییرات" else "ثبت خودرو",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    Text(
+                        text = "(قالب قدیمی)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
+        }
+
+        IranPlateInput(
+            plate = iranPlate,
+            onPlateChange = {
+                iranPlate = it
+                validationError = null
+            }
+        )
+
+        if (validationError != null) {
+            Text(
+                text = validationError ?: "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

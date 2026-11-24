@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mycar.app.ui.components.AppShapes
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.repository.ReminderItem
 import com.mycar.app.data.repository.ReminderStatus
@@ -182,7 +183,7 @@ fun EmptyDashboard(onAddVehicle: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onAddVehicle,
-            shape = RoundedCornerShape(12.dp),
+            shape = AppShapes.Button,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White
@@ -201,7 +202,7 @@ fun ActiveVehicleCard(vehicle: Vehicle, onSwitchVehicle: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSwitchVehicle() },
-        shape = RoundedCornerShape(16.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = Color.White
@@ -254,7 +255,7 @@ fun StatCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
@@ -291,7 +292,7 @@ fun QuickActionButton(
 ) {
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
@@ -326,7 +327,7 @@ fun ReminderCard(item: ReminderItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {

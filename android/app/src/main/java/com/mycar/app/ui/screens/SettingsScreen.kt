@@ -2,7 +2,6 @@ package com.mycar.app.ui.screens
 
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -20,9 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mycar.app.ui.components.AppShapes
 import com.mycar.app.data.backup.BackupSerializer
 import com.mycar.app.data.backup.RestoreResult
 import com.mycar.app.data.backup.ValidationResult
+import com.mycar.app.ui.components.AppDialog
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -106,10 +107,9 @@ fun SettingsScreen(
         }
     }
 
-    // Observe feedback messages and trigger toast & snackbar
+    // Show each feedback message once (a single snackbar, no duplicate toast)
     LaunchedEffect(feedbackMessage) {
         feedbackMessage?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             snackbarHostState.showSnackbar(msg)
             feedbackMessage = null
         }
@@ -136,7 +136,7 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = AppShapes.Card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -182,7 +182,7 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .defaultMinSize(minHeight = 44.dp),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppShapes.Button,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = Color.White
@@ -216,7 +216,7 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .defaultMinSize(minHeight = 44.dp),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = AppShapes.Button,
                                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.primary
@@ -246,47 +246,37 @@ fun SettingsScreen(
                 }
             }
 
-            // Section 2: Technical Specifications
+            // Section 2: About (developer name and app version only)
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = AppShapes.Card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("مشخصات فنی نرم‌افزار", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Divider(color = MaterialTheme.colorScheme.outline)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("نام برنامه:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("My Car (خودروی من)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "درباره برنامه",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Divider(color = MaterialTheme.colorScheme.outline)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("بسته نرم‌افزاری (Package):", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("com.mycar.app", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Divider(color = MaterialTheme.colorScheme.outline)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("قلم برنامه (Font):", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Vazirmatn (وزیرمتن فارسی)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Divider(color = MaterialTheme.colorScheme.outline)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("پایگاه داده:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Room SQLite (کاملاً آفلاین)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("سازنده:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("امید کرمیار", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Divider(color = MaterialTheme.colorScheme.outline)
                         Row(
@@ -294,7 +284,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("نسخه:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("1.0.0 (نسخه نهایی)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(APP_VERSION, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
@@ -304,7 +294,7 @@ fun SettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = AppShapes.Card,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
@@ -320,7 +310,7 @@ fun SettingsScreen(
                         Button(
                             onClick = { showConfirmClearDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = AppShapes.Button
                         ) {
                             Icon(Icons.Default.DeleteForever, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
@@ -342,91 +332,64 @@ fun SettingsScreen(
 
     // Confirmation Dialog for Restore
     if (showConfirmRestoreDialog) {
-        AlertDialog(
-            onDismissRequest = {
+        AppDialog(
+            title = "بازیابی نسخه پشتیبان",
+            onDismiss = {
                 showConfirmRestoreDialog = false
                 pendingRestoreJson = null
             },
-            title = {
-                Text(
-                    text = "بازیابی نسخه پشتیبان",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    text = "با بازیابی نسخه پشتیبان، اطلاعات فعلی برنامه جایگزین میشود. آیا مطمئن هستید؟",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val json = pendingRestoreJson
-                        showConfirmRestoreDialog = false
-                        pendingRestoreJson = null
-                        if (json != null) {
-                            isLoading = true
-                            coroutineScope.launch {
-                                try {
-                                    val result = onRestoreBackup(json)
-                                    feedbackMessage = when (result) {
-                                        is RestoreResult.Success -> "بازیابی نسخه پشتیبان با موفقیت انجام شد."
-                                        is RestoreResult.InvalidFile -> "فایل نسخه پشتیبان معتبر نیست."
-                                        is RestoreResult.UnsupportedSchema -> "نسخه این فایل پشتیبان با نسخه فعلی برنامه سازگار نیست."
-                                        is RestoreResult.Failure -> "بازیابی انجام نشد و اطلاعات فعلی بدون تغییر باقی ماند."
-                                    }
-                                } catch (e: Exception) {
-                                    feedbackMessage = "بازیابی انجام نشد و اطلاعات فعلی بدون تغییر باقی ماند."
-                                } finally {
-                                    isLoading = false
-                                }
+            confirmText = "بازیابی",
+            onConfirm = {
+                val json = pendingRestoreJson
+                showConfirmRestoreDialog = false
+                pendingRestoreJson = null
+                if (json != null) {
+                    isLoading = true
+                    coroutineScope.launch {
+                        try {
+                            val result = onRestoreBackup(json)
+                            feedbackMessage = when (result) {
+                                is RestoreResult.Success -> "بازیابی نسخه پشتیبان با موفقیت انجام شد."
+                                is RestoreResult.InvalidFile -> "فایل نسخه پشتیبان معتبر نیست."
+                                is RestoreResult.UnsupportedSchema -> "نسخه این فایل پشتیبان با نسخه فعلی برنامه سازگار نیست."
+                                is RestoreResult.Failure -> "بازیابی انجام نشد و اطلاعات فعلی بدون تغییر باقی ماند."
                             }
+                        } catch (e: Exception) {
+                            feedbackMessage = "بازیابی انجام نشد و اطلاعات فعلی بدون تغییر باقی ماند."
+                        } finally {
+                            isLoading = false
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("بازیابی", fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showConfirmRestoreDialog = false
-                        pendingRestoreJson = null
                     }
-                ) {
-                    Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        )
+        ) {
+            Text(
+                text = "با بازیابی نسخه پشتیبان، اطلاعات فعلی برنامه جایگزین می‌شود. آیا مطمئن هستید؟",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 
     // Confirmation Dialog for Clear All
     if (showConfirmClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmClearDialog = false },
-            title = { Text("تایید حذف اطلاعات", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-            text = { Text("آیا اطمینان دارید؟ تمامی اطلاعات خودروها، سرویس‌ها و هزینه‌ها حذف خواهند شد و پایگاه داده خالی می‌شود.", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onClearAllData()
-                        showConfirmClearDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("بله، پاکسازی شود", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmClearDialog = false }) {
-                    Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        AppDialog(
+            title = "تایید حذف اطلاعات",
+            onDismiss = { showConfirmClearDialog = false },
+            confirmText = "بله، پاکسازی شود",
+            confirmColor = MaterialTheme.colorScheme.error,
+            onConfirm = {
+                onClearAllData()
+                showConfirmClearDialog = false
             }
-        )
+        ) {
+            Text(
+                text = "آیا اطمینان دارید؟ تمامی اطلاعات خودروها، سرویس‌ها و هزینه‌ها حذف خواهند شد و پایگاه داده خالی می‌شود.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
+
+private const val APP_VERSION = "1.0"

@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 
 /**
  * Plate categories supported by the Iranian national license plate design.
@@ -93,15 +92,16 @@ data class IranPlate(
         get() = twoDigits.isNotEmpty() || threeDigits.isNotEmpty() || provinceCode.isNotEmpty()
 
     /**
-     * Formats the plate into the standard Persian string representation:
-     * e.g. "۱۲ ب ۳۶۵ ایران ۳۳"
+     * Formats the plate into the standard Iranian national plate representation
+     * (physical order, left to right): 2 digits | letter | 3 digits | province code
+     * e.g. "۱۲ | ب | ۳۶۵ | ۳۳"
      */
     fun toNormalizedString(): String {
         if (!isValid) return ""
         val p1 = IranPlateParser.toPersianDigits(twoDigits)
         val p2 = IranPlateParser.toPersianDigits(threeDigits)
         val prov = IranPlateParser.toPersianDigits(provinceCode)
-        return "$p1 $letter $p2 ایران $prov"
+        return "$p1 | $letter | $p2 | $prov"
     }
 
     companion object {
@@ -136,71 +136,57 @@ object IranPlateParser {
         return input.map { ENGLISH_TO_PERSIAN_MAP[it] ?: it }.joinToString("")
     }
 
+    private const val LETTERS = "بجدسصطقلمنوهی"
+
+    // Standard: 2 digits, letter, 3 digits, province
+    private val FORMAT_STANDARD = Regex("(\\d{2})\\s*([$LETTERS])\\s*(\\d{3})\\s*(\\d{2})")
+    // Legacy: 3 digits, letter, 2 digits, province
+    private val FORMAT_LEGACY = Regex("(\\d{3})\\s*([$LETTERS])\\s*(\\d{2})\\s*(\\d{2})")
+    // Province first: province, 2 digits, letter, 3 digits
+    private val FORMAT_PROVINCE_FIRST = Regex("(\\d{2})\\s*(\\d{2})\\s*([$LETTERS])\\s*(\\d{3})")
+    // Province first (legacy): province, 3 digits, letter, 2 digits
+    private val FORMAT_PROVINCE_FIRST_LEGACY = Regex("(\\d{2})\\s*(\\d{3})\\s*([$LETTERS])\\s*(\\d{2})")
+
+    private val SEPARATORS = Regex("[\\s|\\-\u2013\u060C,/._]+")
+
     /**
      * Parses an Iranian license plate from a raw stored string.
-     * Fully backward compatible with old stored structures and flexible user entries:
-     * - New standard: "12 ب 365 ایران 33" or "۱۲ ب ۳۶۵ ایران ۳۳"
-     * - Old stored format: "365 ب 12 ایران 33" or "123 ب 45 ایران 12"
+     * Understands the current standard and every older format that the app stored before:
+     * - Standard: "۱۲ | ب | ۳۶۵ | ۳۳"
+     * - Previous format: "12 ب 365 ایران 33" / "۱۲ ب ۳۶۵ ایران ۳۳"
+     * - Old format: "365 ب 12 ایران 33"
      * - Compact formats: "12ب365-33" or "365ب12-33"
-     * - Iran prefix formats: "ایران 33 12 ب 365"
+     * - Province-first formats: "ایران 33 12 ب 365"
+     * Returns null when the text is not a recognizable plate.
      */
     fun parse(raw: String): IranPlate? {
         if (raw.isBlank()) return null
-        val normalized = toEnglishDigits(raw.trim())
 
-        // Format A: 2 digits, letter, 3 digits, (ایران or - or space), 2 digits
-        // e.g. "12 ب 365 ایران 33" or "12ب365-33"
-        val pA = Regex("""(\d{2})\s*([بجدسصطقلمنوهی])\s*(\d{3})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
-        val mA = pA.find(normalized)
-        if (mA != null) {
-            val (two, letter, three, prov) = mA.destructured
-            return IranPlate(
-                twoDigits = two,
-                letter = letter,
-                threeDigits = three,
-                provinceCode = prov
-            )
+        val text = toEnglishDigits(raw.trim())
+            .replace("ایران", " ")
+            .replace(SEPARATORS, " ")
+            .trim()
+        if (text.isEmpty()) return null
+
+        // Reject anything that contains characters other than digits, plate letters and spaces
+        if (text.any { it != ' ' && it !in '0'..'9' && it !in LETTERS }) return null
+
+        FORMAT_STANDARD.matchEntire(text)?.let { m ->
+            val (two, letter, three, prov) = m.destructured
+            return IranPlate(twoDigits = two, letter = letter, threeDigits = three, provinceCode = prov)
         }
-
-        // Format B: Old stored format: 3 digits, letter, 2 digits, (ایران or - or space), 2 digits
-        // e.g. "365 ب 12 ایران 33" or "123 ب 45 ایران 12"
-        val pB = Regex("""(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})(?:\s*ایران|\s*-|\s*|\s*،)\s*(\d{2})""")
-        val mB = pB.find(normalized)
-        if (mB != null) {
-            val (three, letter, two, prov) = mB.destructured
-            return IranPlate(
-                twoDigits = two,
-                letter = letter,
-                threeDigits = three,
-                provinceCode = prov
-            )
+        FORMAT_LEGACY.matchEntire(text)?.let { m ->
+            val (three, letter, two, prov) = m.destructured
+            return IranPlate(twoDigits = two, letter = letter, threeDigits = three, provinceCode = prov)
         }
-
-        // Format C: Iran prefix: ایران 33 12 ب 365 or ایران 12 - 123 ب 45
-        val pC = Regex("""(?:ایران\s*)?(\d{2})\s*(?:ایران\s*|-)?\s*(\d{2})\s*([بجدسصطقلمنوهی])\s*(\d{3})""")
-        val mC = pC.find(normalized)
-        if (mC != null) {
-            val (prov, two, letter, three) = mC.destructured
-            return IranPlate(
-                twoDigits = two,
-                letter = letter,
-                threeDigits = three,
-                provinceCode = prov
-            )
+        FORMAT_PROVINCE_FIRST.matchEntire(text)?.let { m ->
+            val (prov, two, letter, three) = m.destructured
+            return IranPlate(twoDigits = two, letter = letter, threeDigits = three, provinceCode = prov)
         }
-
-        val pD = Regex("""(?:ایران\s*)?(\d{2})\s*(?:ایران\s*|-)?\s*(\d{3})\s*([بجدسصطقلمنوهی])\s*(\d{2})""")
-        val mD = pD.find(normalized)
-        if (mD != null) {
-            val (prov, three, letter, two) = mD.destructured
-            return IranPlate(
-                twoDigits = two,
-                letter = letter,
-                threeDigits = three,
-                provinceCode = prov
-            )
+        FORMAT_PROVINCE_FIRST_LEGACY.matchEntire(text)?.let { m ->
+            val (prov, three, letter, two) = m.destructured
+            return IranPlate(twoDigits = two, letter = letter, threeDigits = three, provinceCode = prov)
         }
-
         return null
     }
 }
@@ -208,8 +194,8 @@ object IranPlateParser {
 /**
  * Interactive Iranian National Vehicle License Plate Input Component.
  * Formatted physically from left to right as:
- * [Blue Band IRAN] [2 Digits] [Letter] [3 Digits] | [ایران / Province Code]
- * E.g.: BLUE | ۱۲ | ب | ۳۶۵ | ایران ۳۳
+ * [Blue Strip] | [2 Digits] | [Letter] | [3 Digits] | [Province Code]
+ * E.g.: BLUE | ۱۲ | ب | ۳۶۵ | ۳۳
  */
 @Composable
 fun IranPlateInput(
@@ -243,8 +229,8 @@ fun IranPlateInput(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "نمونه: ۱۲ ب ۳۶۵ ایران ۳۳",
-                style = MaterialTheme.typography.bodySmall,
+                text = "نمونه: ۱۲ | ب | ۳۶۵ | ۳۳",
+                style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -480,80 +466,56 @@ fun IranPlateInput(
                             .background(plate.type.borderColor)
                     )
 
-                    // 5. Province Box (Rightmost: "ایران" on top, 2 digits province code below)
+                    // 5. Province Code Box (Rightmost: 2-digit province code)
                     Box(
                         modifier = Modifier
                             .width(60.dp)
                             .fillMaxHeight()
-                            .clickable { provinceRequester.requestFocus() }
-                            .padding(vertical = 4.dp),
+                            .clickable { provinceRequester.requestFocus() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        BasicTextField(
+                            value = IranPlateParser.toPersianDigits(plate.provinceCode),
+                            onValueChange = { input ->
+                                val english = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
+                                if (english.length <= 2) {
+                                    onPlateChange(plate.copy(provinceCode = english))
+                                    if (english.length == 2) {
+                                        focusManager.clearFocus()
+                                    }
+                                }
+                            },
+                            textStyle = TextStyle(
+                                color = plate.type.textColor,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                textDirection = TextDirection.Ltr
+                            ),
+                            cursorBrush = SolidColor(plate.type.textColor),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { focusManager.clearFocus() }
+                            ),
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(provinceRequester)
+                        )
+
+                        if (plate.provinceCode.isEmpty()) {
                             Text(
-                                text = "ایران",
+                                text = "۳۳",
                                 style = TextStyle(
-                                    color = plate.type.textColor,
-                                    fontSize = 11.sp,
+                                    color = Color.LightGray,
+                                    fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
                             )
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                BasicTextField(
-                                    value = IranPlateParser.toPersianDigits(plate.provinceCode),
-                                    onValueChange = { input ->
-                                        val english = IranPlateParser.toEnglishDigits(input).filter { it.isDigit() }
-                                        if (english.length <= 2) {
-                                            onPlateChange(plate.copy(provinceCode = english))
-                                            if (english.length == 2) {
-                                                focusManager.clearFocus()
-                                            }
-                                        }
-                                    },
-                                    textStyle = TextStyle(
-                                        color = plate.type.textColor,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center,
-                                        textDirection = TextDirection.Ltr
-                                    ),
-                                    cursorBrush = SolidColor(plate.type.textColor),
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = KeyboardType.Number,
-                                        imeAction = ImeAction.Done
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = { focusManager.clearFocus() }
-                                    ),
-                                    singleLine = true,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(provinceRequester)
-                                )
-
-                                if (plate.provinceCode.isEmpty()) {
-                                    Text(
-                                        text = "۳۳",
-                                        style = TextStyle(
-                                            color = Color.LightGray,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -576,7 +538,7 @@ fun IranPlateInput(
 }
 
 /**
- * Clean dialog for choosing a valid Iranian personal vehicle plate letter.
+ * Dialog for choosing a valid Iranian personal vehicle plate letter.
  */
 @Composable
 fun SelectPlateLetterDialog(
@@ -584,92 +546,61 @@ fun SelectPlateLetterDialog(
     onLetterSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Dialog(onDismissRequest = onDismiss) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+    AppDialog(
+        title = "انتخاب حرف پلاک",
+        onDismiss = onDismiss
+    ) {
+        Text(
+            text = "حروف مجاز خودروهای شخصی ایران:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Letter Grid (13 letters)
+        val rows = IranPlate.VALID_LETTERS.chunked(4)
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            rows.forEach { rowLetters ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "انتخاب حرف پلاک",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "حروف مجاز خودروهای شخصی ایران:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Letter Grid (13 letters)
-                    val letters = IranPlate.VALID_LETTERS
-                    val rows = letters.chunked(4)
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        rows.forEach { rowLetters ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                rowLetters.forEach { l ->
-                                    val isSelected = l == currentLetter
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(44.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                            )
-                                            .border(
-                                                width = if (isSelected) 2.dp else 1.dp,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                                shape = RoundedCornerShape(10.dp)
-                                            )
-                                            .clickable { onLetterSelected(l) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = l,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                                // Fill empty slots in the last row if needed
-                                if (rowLetters.size < 4) {
-                                    repeat(4 - rowLetters.size) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
+                    rowLetters.forEach { l ->
+                        val isSelected = l == currentLetter
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onLetterSelected(l) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = l,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("انصراف", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Fill empty slots in the last row if needed
+                    if (rowLetters.size < 4) {
+                        repeat(4 - rowLetters.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -804,33 +735,19 @@ fun IranPlateBadge(
                             .background(parsed.type.borderColor)
                     )
 
-                    // Province Box
+                    // Province Code Box
                     Box(
                         modifier = Modifier
                             .width(28.dp)
-                            .fillMaxHeight()
-                            .padding(vertical = 1.dp),
+                            .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "ایران",
-                                fontSize = 6.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = parsed.type.textColor,
-                                lineHeight = 6.sp
-                            )
-                            Text(
-                                text = IranPlateParser.toPersianDigits(parsed.provinceCode),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = parsed.type.textColor,
-                                lineHeight = 9.sp
-                            )
-                        }
+                        Text(
+                            text = IranPlateParser.toPersianDigits(parsed.provinceCode),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = parsed.type.textColor
+                        )
                     }
                 }
             }

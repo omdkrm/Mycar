@@ -222,6 +222,13 @@ class MainViewModel(private val repository: CarRepository) : ViewModel() {
         }
     }
 
+    fun updateFuelRecord(record: FuelRecord) {
+        viewModelScope.launch {
+            repository.updateFuelRecord(record)
+            activeVehicle.value?.let { refreshVehicleCalculations(it) }
+        }
+    }
+
     fun deleteFuelRecord(record: FuelRecord) {
         viewModelScope.launch {
             repository.deleteFuelRecord(record)

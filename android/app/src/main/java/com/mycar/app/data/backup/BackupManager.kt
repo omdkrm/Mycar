@@ -58,12 +58,15 @@ class BackupManager(private val database: AppDatabase) {
      */
     suspend fun writeBackupToUri(context: Context, uri: Uri, jsonContent: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                OutputStreamWriter(outputStream, StandardCharsets.UTF_8).use { writer ->
+            // If the destination cannot be opened, report failure instead of a false success
+            val outputStream = context.contentResolver.openOutputStream(uri)
+                ?: return@withContext false
+            outputStream.use { stream ->
+                OutputStreamWriter(stream, StandardCharsets.UTF_8).use { writer ->
                     writer.write(jsonContent)
                     writer.flush()
                 }
-            } ?: false
+            }
             true
         } catch (e: Exception) {
             e.printStackTrace()

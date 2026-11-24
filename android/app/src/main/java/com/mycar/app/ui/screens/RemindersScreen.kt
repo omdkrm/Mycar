@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mycar.app.ui.components.AppShapes
 import com.mycar.app.data.model.ReminderIntervalType
 import com.mycar.app.data.model.Vehicle
 import com.mycar.app.data.repository.ReminderItem
@@ -90,7 +91,7 @@ fun FullReminderCard(item: ReminderItem, onClick: () -> Unit) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.Card,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {

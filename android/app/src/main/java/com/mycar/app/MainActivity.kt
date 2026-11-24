@@ -2,6 +2,7 @@ package com.mycar.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
@@ -52,6 +53,10 @@ class MainActivity : ComponentActivity() {
                     val reminders by viewModel.reminders.collectAsState()
                     val stats by viewModel.stats.collectAsState()
 
+                    BackHandler(enabled = currentScreen != Screen.DASHBOARD) {
+                        currentScreen = Screen.DASHBOARD
+                    }
+
                     Scaffold(
                         topBar = {
                             TopAppBar(
@@ -85,7 +90,8 @@ class MainActivity : ComponentActivity() {
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 tonalElevation = 3.dp
                             ) {
-                                Screen.values().forEach { screen ->
+                                // Settings is reachable from the top bar only, so it is not listed here
+                                Screen.values().filter { it != Screen.SETTINGS }.forEach { screen ->
                                     val isSelected = currentScreen == screen
                                     NavigationBarItem(
                                         icon = {
@@ -163,6 +169,9 @@ class MainActivity : ComponentActivity() {
                                     fuelRecords = fuelRecords,
                                     onAddFuelRecord = { vId, date, km, liters, cpl, total, isFull, fType, station, notes ->
                                         viewModel.addFuelRecord(vId, date, km, liters, cpl, total, isFull, fType, station, notes)
+                                    },
+                                    onUpdateFuelRecord = { updatedRecord ->
+                                        viewModel.updateFuelRecord(updatedRecord)
                                     },
                                     onDeleteFuelRecord = { viewModel.deleteFuelRecord(it) }
                                 )
